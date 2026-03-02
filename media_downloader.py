@@ -18,7 +18,9 @@ class MediaDownloader:
             }
             with yt_dlp.YoutubeDL(ydl_config) as ydl: # type: ignore
                 for filename, url in self.urls:
-                    ydl.params['outtmpl']['default'] = f'data/videos/{filename}.%(ext)s' # type: ignore
-                    ydl.download([url])
+                    ydl.params['outtmpl'] = {
+                        'default': f'data/videos/%(uploader)s/{filename}.%(ext)s'
+                    }
+                    ydl.extract_info(url, download=True)
         except Exception as e:
             print(e)
