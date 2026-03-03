@@ -5,6 +5,7 @@ import json
 
 from bs4 import BeautifulSoup
 from pathlib import Path
+from wakepy import keep
 from datasets import load_dataset
 
 from environment import Environment
@@ -94,6 +95,7 @@ def get_user_info(username: str) -> dict[str, str]:
     return {}
 
 
+@keep.presenting
 def main():
     env = Environment()
     start_time = time.perf_counter()
