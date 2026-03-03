@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup
 from pathlib import Path
 from datasets import load_dataset
 
+from environment import Environment
+
 
 def download_video(url: str, output_filename: str) -> dict[str, str]:
     try:
@@ -93,16 +95,18 @@ def get_user_info(username: str) -> dict[str, str]:
 
 
 def main():
+    env = Environment()
     start_time = time.perf_counter()
     dataset = load_dataset("The-data-company/TikTok-10M", split="train",
                            streaming=True)
-    for example in dataset.skip(1500):
+    print(f'Starting downloads from example {env.args.skip_n_examples}')
+    for example in dataset.skip(env.args.skip_n_examples):
         video_info = download_video(example['url'], example['id'])
         if username := video_info.get('username'):
             media_path = Path(f"data/videos/{username}")
             if media_path.exists():
                 user_info = get_user_info(username)
-                with open(media_path / 'user_info.json', 'w') as out_file:
+                with open(media_path / f'{example["id"]}.json', 'w') as out_file:
                     json.dump(user_info, out_file, indent=4)
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
