@@ -96,13 +96,14 @@ def main():
     start_time = time.perf_counter()
     dataset = load_dataset("The-data-company/TikTok-10M", split="train",
                            streaming=True)
-    for example in dataset:
+    for example in dataset.skip(1500):
         video_info = download_video(example['url'], example['id'])
-        media_path = Path(f"data/videos/{video_info['username']}")
-        if media_path.exists():
-            user_info = get_user_info(video_info['username'])
-            with open(media_path / 'user_info.json', 'w') as out_file:
-                json.dump(user_info, out_file, indent=4)
+        if username := video_info.get('username'):
+            media_path = Path(f"data/videos/{username}")
+            if media_path.exists():
+                user_info = get_user_info(username)
+                with open(media_path / 'user_info.json', 'w') as out_file:
+                    json.dump(user_info, out_file, indent=4)
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
     print(f"Execution time: {elapsed_time:.4f} seconds")
