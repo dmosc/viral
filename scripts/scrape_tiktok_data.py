@@ -96,16 +96,6 @@ def get_user_info(username: str) -> dict[str, str]:
     return {}
 
 
-def process_example(example: dict):
-    video_info = download_video(example['url'], example['id'])
-    if username := video_info.get('username'):
-        media_path = Path(f"data/videos/{username}")
-        if media_path.exists():
-            user_info = get_user_info(username)
-            with open(media_path / f'{example["id"]}.json', 'w') as out_file:
-                json.dump(user_info, out_file, indent=4)
-
-
 @keep.presenting
 def main():
     env = Environment()
@@ -113,8 +103,14 @@ def main():
     dataset = load_dataset("The-data-company/TikTok-10M", split="train",
                            streaming=True)
     print(f'Starting downloads from example {env.args.skip_n_examples}')
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        executor.map(process_example, dataset.skip(env.args.skip_n_examples))
+    for example in dataset.skip(env.args.skip_n_examples):
+        video_info = download_video(example['url'], example['id'])
+        if username := video_info.get('username'):
+            media_path = Path(f"data/videos/{username}")
+            if media_path.exists():
+                user_info = get_user_info(username)
+                with open(media_path / f'{example["id"]}.json', 'w') as out_file:
+                    json.dump(user_info, out_file, indent=4)
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
     print(f"Execution time: {elapsed_time:.4f} seconds")
