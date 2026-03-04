@@ -2,6 +2,7 @@ import time
 import yt_dlp
 import requests
 import json
+import threading
 
 from bs4 import BeautifulSoup
 from pathlib import Path
@@ -96,6 +97,22 @@ def get_user_info(username: str) -> dict[str, str]:
     return {}
 
 
+disk_lock = threading.Lock()
+
+def process_example(example):
+    video_info = download_video(example['url'], example['id'])
+    if username := video_info.get('username'):
+        media_path = Path(f'data/videos/{username}')
+        with disk_lock:
+            media_path.mkdir(parents=True, exist_ok=True)
+        if media_path.exists():
+            user_info = get_user_info(username)
+            file_path = media_path / 'user.json'
+            with open(file_path, 'w') as out_file:
+                json.dump(user_info, out_file, indent=4)
+            print(f'Downloaded {example["url"]}')
+
+
 @keep.presenting
 def main():
     env = Environment()
@@ -103,14 +120,9 @@ def main():
     dataset = load_dataset("The-data-company/TikTok-10M", split="train",
                            streaming=True)
     print(f'Starting downloads from example {env.args.skip_n_examples}')
-    for example in dataset.skip(env.args.skip_n_examples):
-        video_info = download_video(example['url'], example['id'])
-        if username := video_info.get('username'):
-            media_path = Path(f"data/videos/{username}")
-            if media_path.exists():
-                user_info = get_user_info(username)
-                with open(media_path / f'{example["id"]}.json', 'w') as out_file:
-                    json.dump(user_info, out_file, indent=4)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        executor.map(lambda example: process_example(example), 
+                     dataset.skip(env.args.skip_n_examples))
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
     print(f"Execution time: {elapsed_time:.4f} seconds")
