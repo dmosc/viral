@@ -4,7 +4,7 @@ import json
 from datasets import load_dataset
 from datasets import Dataset, Features, Value
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import timezone
 from dateutil import parser
 
 
@@ -77,11 +77,15 @@ def parse_bool(value):
     return False
 
 
-def parse_to_timestamp_s(date_str):
-    if not date_str:
+def parse_to_timestamp_s(date_val):
+    if date_val is None:
         return None
+    # If already an int (epoch), Huggingface handles it directly
+    if isinstance(date_val, (int, float)):
+        return int(date_val)
     try:
-        dt = parser.parse(date_str)
+        # If string, parse and truncate microseconds
+        dt = parser.parse(str(date_val))
         dt_utc = dt.astimezone(timezone.utc)
         return dt_utc.replace(tzinfo=None, microsecond=0)
     except Exception:
@@ -91,52 +95,56 @@ def parse_to_timestamp_s(date_str):
 def get_video_path_map():
     media_path = Path('data/videos')
     video_path_map = {}
+    if not media_path.exists():
+        return {}
     for folder in media_path.iterdir():
-        for file in folder.iterdir():
-            match = re.search(r'(\d+).mp4', file.name)
-            if match:
-                video_id = match.group(1)
-                video_path_map[int(video_id)] = folder
+        if folder.is_dir():
+            for file in folder.iterdir():
+                match = re.search(r'(\d+).mp4', file.name)
+                if match:
+                    video_id = match.group(1)
+                    video_path_map[int(video_id)] = folder
     return video_path_map
 
 
-def main():
-    dataset = load_dataset('The-data-company/TikTok-10M', split='train',
-                           streaming=True)
-    video_path_map = get_video_path_map()
-    examples_for_dataset = []
+def assemble_example(dataset, video_path_map):
+    found_ids = set()
+    total_to_find = len(video_path_map)
     for example in dataset:
-        if example['id'] in video_path_map:
-            folder = video_path_map[example['id']]
+        video_id = example['id']
+        if video_id in video_path_map:
+            folder = video_path_map[video_id]
             user_json_path = folder / 'user.json'
             video_json_path = folder / 'video.json'
+            
             user_data = {}
             if user_json_path.exists():
                 with open(user_json_path, 'r') as f:
                     user_data = json.load(f)
+            
             video_data = {}
             if video_json_path.exists():
                 with open(video_json_path, 'r') as f:
                     video_data = json.load(f)
-            new_example = {
+            yield {
                 # --- USER & AUTHOR FIELDS ---
-                'user_id': int(user_data.get('user_id', example.get('user_id', 0))),
+                'user_id': int(user_data.get('user_id') or example.get('user_id') or 0),
                 'username': user_data.get('unique_id', example.get('username')),
                 'user_language': user_data.get('user_language'),
                 'city': example.get('city'),
                 'user_verified': parse_bool(user_data.get('is_verified', example.get('user_verified'))),
                 'is_private': parse_bool(user_data.get('is_private')),
-                'account_create_time': user_data.get('account_create_time'),
+                'account_create_time': parse_to_timestamp_s(user_data.get('account_create_time')),
                 'author_follower_count': user_data.get('author_follower_count'),
                 'author_following_count': user_data.get('author_following_count'),
                 'author_total_heart_count': user_data.get('author_total_heart_count'),
                 'author_video_count': user_data.get('author_video_count'),
                 'author_friend_count': user_data.get('author_friend_count'),
                 # --- VIDEO CONTENT & METADATA ---
-                'id': example['id'],
+                'id': video_id,
                 'url': example.get('url'),
-                'description': example.get('desc'), # Note: mapping 'desc' to 'description'
-                'create_time': example.get('create_time'),
+                'description': example.get('desc'),
+                'create_time': parse_to_timestamp_s(example.get('create_time')),
                 'is_ad': parse_bool(example.get('is_ad')),
                 'share_enabled': parse_bool(example.get('share_enabled')),
                 'stitch_enabled': parse_bool(example.get('stitch_enabled')),
@@ -177,14 +185,27 @@ def main():
                 'poi_tt_type_name_medium': example.get('poi_tt_type_name_medium'),
                 'poi_tt_type_name_tiny': example.get('poi_tt_type_name_tiny'),
             }
-            examples_for_dataset.append(new_example)
-    if examples_for_dataset:
-        new_dataset = Dataset.from_list(examples_for_dataset,
-                                        features=DATASET_FEATURES)
-        new_dataset.push_to_hub('rodmosc/viral')
-        print(f"Success! Pushed {len(examples_for_dataset)} examples.")
-    else:
-        print("No matching videos found.")
+            found_ids.add(example['id'])
+            if len(found_ids) >= total_to_find:
+                return
+
+
+def main():
+    dataset = load_dataset('The-data-company/TikTok-10M', split='train',
+                           streaming=True)
+    video_path_map = get_video_path_map()
+    print(f"Mapped {len(video_path_map)} local videos.")
+    new_dataset = Dataset.from_generator(
+        assemble_example,
+        gen_kwargs={"dataset": dataset, "video_path_map": video_path_map},
+        features=DATASET_FEATURES
+    )
+    if isinstance(new_dataset, Dataset):
+        if new_dataset.num_rows > 0:
+            new_dataset.push_to_hub('rodmosc/viral')
+            print(f"Success! Pushed {new_dataset.num_rows} examples.")
+        else:
+            print("No matches found.")
 
 
 if __name__ == '__main__':
