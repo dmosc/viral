@@ -110,6 +110,11 @@ def process_example(example):
             file_path = media_path / 'user.json'
             with open(file_path, 'w') as out_file:
                 json.dump(user_info, out_file, indent=4)
+
+            file_path = media_path / 'video.json'
+            with open(file_path, 'w') as out_file:
+                json.dump(video_info, out_file, indent=4)
+
             print(f'Downloaded {example["url"]}')
 
 
@@ -120,7 +125,7 @@ def main():
     dataset = load_dataset("The-data-company/TikTok-10M", split="train",
                            streaming=True)
     print(f'Starting downloads from example {env.args.skip_n_examples}')
-    with ThreadPoolExecutor(max_workers=2) as executor:
+    with ThreadPoolExecutor(max_workers=4) as executor:
         executor.map(lambda example: process_example(example), 
                      dataset.skip(env.args.skip_n_examples))
     end_time = time.perf_counter()
