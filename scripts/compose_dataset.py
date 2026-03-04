@@ -73,7 +73,7 @@ def parse_bool(value):
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
-        return value.lower() in ("t", "true", "1")
+        return value.lower() in ('t', 'true', '1')
     return False
 
 
@@ -194,18 +194,18 @@ def main():
     dataset = load_dataset('The-data-company/TikTok-10M', split='train',
                            streaming=True)
     video_path_map = get_video_path_map()
-    print(f"Mapped {len(video_path_map)} local videos.")
+    print(f'Mapped {len(video_path_map)} local videos.')
     new_dataset = Dataset.from_generator(
         assemble_example,
-        gen_kwargs={"dataset": dataset, "video_path_map": video_path_map},
+        gen_kwargs={'dataset': dataset, 'video_path_map': video_path_map},
         features=DATASET_FEATURES
     )
     if isinstance(new_dataset, Dataset):
         if new_dataset.num_rows > 0:
             new_dataset.push_to_hub('rodmosc/viral')
-            print(f"Success! Pushed {new_dataset.num_rows} examples.")
+            print(f'Success! Pushed {new_dataset.num_rows} examples.')
         else:
-            print("No matches found.")
+            print('No matches found.')
 
 
 if __name__ == '__main__':

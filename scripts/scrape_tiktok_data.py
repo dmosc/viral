@@ -63,16 +63,16 @@ def download_video(url: str, output_filename: str) -> dict[str, str]:
 
 def get_user_info(username: str) -> dict[str, str]:
     try:
-        url = f"https://www.tiktok.com/@{username}"
+        url = f'https://www.tiktok.com/@{username}'
         response = requests.get(url)
         response.raise_for_status()
-        parser = BeautifulSoup(response.text, "html.parser")
-        script_with_user_info = parser.find("script",
-                                            id="__UNIVERSAL_DATA_FOR_REHYDRATION__")
+        parser = BeautifulSoup(response.text, 'html.parser')
+        script_with_user_info = parser.find('script',
+                                            id='__UNIVERSAL_DATA_FOR_REHYDRATION__')
         if script_with_user_info and script_with_user_info.string:
             payload = json.loads(script_with_user_info.string)
             user_payload = payload.get(
-                "__DEFAULT_SCOPE__", {}).get("webapp.user-detail", {})
+                '__DEFAULT_SCOPE__', {}).get('webapp.user-detail', {})
             user_info = user_payload.get('userInfo', {}).get('user', {})
             user_stats = user_payload.get('userInfo', {}).get('stats', {})
             return {
@@ -91,9 +91,9 @@ def get_user_info(username: str) -> dict[str, str]:
                 'author_friend_count': user_stats.get('friendCount')
             }
         else:
-            print(f"Couldn't scrape user info for @{username}")
+            print(f'Couldn\'t scrape user info for @{username}')
     except requests.exceptions.RequestException as exception:
-        print(f"Error fetching data: {exception}")
+        print(f'Error fetching data: {exception}')
     return {}
 
 
@@ -122,15 +122,15 @@ def process_example(example):
 def main():
     env = Environment()
     start_time = time.perf_counter()
-    dataset = load_dataset("The-data-company/TikTok-10M", split="train",
+    dataset = load_dataset('The-data-company/TikTok-10M', split='train',
                            streaming=True)
     print(f'Starting downloads from example {env.args.skip_n_examples}')
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    with ThreadPoolExecutor(max_workers=5) as executor:
         executor.map(lambda example: process_example(example), 
                      dataset.skip(env.args.skip_n_examples))
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
-    print(f"Execution time: {elapsed_time:.4f} seconds")
+    print(f'Execution time: {elapsed_time:.4f} seconds')
 
 
 if __name__ == '__main__':
