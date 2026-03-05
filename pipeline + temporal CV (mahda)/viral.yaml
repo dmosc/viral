@@ -1,0 +1,42 @@
+# Random seed
+seed: &random_seed 2025
+
+# Model config
+model_grid:
+  # LGBMClassifier:
+  #   boosting_type: ['dart']
+  #   num_leaves: [113]
+  #   max_depth: [5]
+  #   learning_rate: [0.06905100466755955]
+  #   feature_fraction: [0.7297568338936504]
+  #   bagging_fraction: [0.6400663168216432]
+  #   bagging_freq: [6]
+  #   min_data_in_leaf: [23]
+  #   lambda_l1: [0.010183843629486145]
+  #   lambda_l2: [0.001186412728752198]
+  #   min_gain_to_split: [0.0017783000305151267]
+  #   random_seed: [*random_seed]
+  #   eval_metric: ['auc']
+  #   thread_count: [-1]
+  #   verbosity: [-1]
+
+
+# Temporal config
+temporal_grid:
+  label_start: ['start data']
+  label_end: ['end date']
+
+  # Based on autocorrelation analysis, usually 12-24 is the move
+  feature_timeframe_months: [12]
+
+  model_update_freq_months: [6]
+
+  max_training_history_years: [5]
+
+  # horizon
+  h: [3]
+
+# Experiment config
+experiment_grid:
+  entities: ['users']
+  targets: ['virality (??)']
