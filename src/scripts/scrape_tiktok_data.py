@@ -142,7 +142,7 @@ def process_example(example):
             with open(file_path, 'w') as out_file:
                 json.dump(user_info, out_file, indent=4)
 
-            file_path = media_path / 'video.json'
+            file_path = media_path / f'{example["id"]}.json'
             with open(file_path, 'w') as out_file:
                 json.dump(video_info, out_file, indent=4)
 
