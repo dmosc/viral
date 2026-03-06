@@ -1,5 +1,6 @@
 import re
 import json
+import moviepy as mp
 
 from datasets import load_dataset
 from datasets import Dataset, Features, Value
@@ -35,6 +36,7 @@ DATASET_FEATURES = Features({
     'diversification_id': Value('int64'),
     'challenges': Value('string'),
     'share_cover': Value('string'),
+    'video_bytes': Value('binary'),
     # --- MUSIC ASSETS ---
     'music_title': Value('string'),
     'music_album': Value('string'),
@@ -110,22 +112,65 @@ def get_video_path_map():
 def assemble_example(dataset, video_path_map):
     found_ids = set()
     total_to_find = len(video_path_map)
+
+    def _downsize_video(video_path):
+        target_resolution = (256, 256)
+        target_fps = 1
+        try:
+            with mp.VideoFileClip(str(video_path)) as clip:
+                if clip.size != target_resolution or clip.fps != target_fps:
+                    print('Downsizing video')
+                    width, height = clip.size
+                    scale = max(target_resolution[0] / width,
+                                target_resolution[1] / height)
+                    new_width, new_height = int(
+                        width * scale), int(height * scale)
+                    x1 = (new_width - target_resolution[0]) // 2
+                    y1 = (new_height - target_resolution[1]) // 2
+                    x2 = x1 + target_resolution[0]
+                    y2 = y1 + target_resolution[1]
+                    modified_clip = (clip.resized((new_width, new_height))
+                                     .cropped(x1=x1, y1=y1, x2=x2, y2=y2)
+                                     .with_fps(target_fps))
+                    modified_clip.write_videofile(
+                        str(video_path),
+                        codec="libx264",
+                        audio=False,
+                        logger=None
+                    )
+                else:
+                    print(f'Already downsized {video_id}')
+
+            video_bytes = None
+            if video_path.exists():
+                with open(video_path, 'rb') as file:
+                    video_bytes = file.read()
+            return video_bytes
+        except Exception as e:
+            print(f'Skipping video {video_id} due to error: {e}')
+
     for example in dataset:
         video_id = example['id']
         if video_id in video_path_map:
             folder = video_path_map[video_id]
             user_json_path = folder / 'user.json'
             video_json_path = folder / 'video.json'
-            
+            video_path = folder / f'{video_id}.mp4'
+
             user_data = {}
             if user_json_path.exists():
                 with open(user_json_path, 'r') as f:
                     user_data = json.load(f)
-            
+
             video_data = {}
             if video_json_path.exists():
                 with open(video_json_path, 'r') as f:
                     video_data = json.load(f)
+
+            video_bytes = None
+            if video_path.exists():
+                video_bytes = _downsize_video(video_path)
+
             yield {
                 # --- USER & AUTHOR FIELDS ---
                 'user_id': int(user_data.get('user_id') or example.get('user_id') or 0),
@@ -153,6 +198,7 @@ def assemble_example(dataset, video_path_map):
                 'diversification_id': int(example.get('diversification_id', 0)) if example.get('diversification_id') else None,
                 'challenges': example.get('challenges'),
                 'share_cover': example.get('share_cover'),
+                'video_bytes': video_bytes,
                 # --- MUSIC ASSETS ---
                 'music_title': video_data.get('track_name', example.get('music_title')),
                 'music_album': video_data.get('album_name', example.get('music_album')),
@@ -191,6 +237,7 @@ def assemble_example(dataset, video_path_map):
 
 
 def main():
+    print('Composing dataset.')
     dataset = load_dataset('The-data-company/TikTok-10M', split='train',
                            streaming=True)
     video_path_map = get_video_path_map()
