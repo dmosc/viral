@@ -3,6 +3,7 @@ import yt_dlp
 import requests
 import json
 import threading
+import moviepy as mp
 
 from bs4 import BeautifulSoup
 from pathlib import Path
@@ -24,11 +25,40 @@ def download_video(url: str, output_filename: str) -> dict[str, str]:
             'noplaylist': True,
             'ffmpeg_location': '/opt/homebrew/bin/ffmpeg'
         }
-        with yt_dlp.YoutubeDL(ydl_config) as ydl: # type: ignore
+        with yt_dlp.YoutubeDL(ydl_config) as ydl:  # type: ignore
             ydl.params['outtmpl'] = {
                 'default': f'data/videos/%(uploader)s/{output_filename}.%(ext)s'
             }
             payload = ydl.extract_info(url, download=True)
+
+            username = payload.get('uploader')
+            extension = payload.get('ext', 'mp4')
+            video_path = Path(
+                f'data/videos/{username}/{output_filename}.{extension}')
+            if video_path.exists():
+                target_resolution = (256, 256)
+                target_fps = 1
+                with mp.VideoFileClip(str(video_path)) as clip:
+                    if clip.size != target_resolution or clip.fps != target_fps:
+                        width, height = clip.size
+                        scale = max(target_resolution[0] / width,
+                                    target_resolution[1] / height)
+                        new_width, new_height = int(
+                            width * scale), int(height * scale)
+                        x1 = (new_width - target_resolution[0]) // 2
+                        y1 = (new_height - target_resolution[1]) // 2
+                        x2 = x1 + target_resolution[0]
+                        y2 = y1 + target_resolution[1]
+                        modified_clip = (clip.resized((new_width, new_height))
+                                         .cropped(x1=x1, y1=y1, x2=x2, y2=y2)
+                                         .with_fps(target_fps))
+                        modified_clip.write_videofile(
+                            str(video_path),
+                            codec="libx264",
+                            audio=False,
+                            logger=None
+                        )
+
             video_info = {
                 'username': payload.get('uploader'),
                 # --- Engagement metrics ---
@@ -99,6 +129,7 @@ def get_user_info(username: str) -> dict[str, str]:
 
 disk_lock = threading.Lock()
 
+
 def process_example(example):
     video_info = download_video(example['url'], example['id'])
     if username := video_info.get('username'):
@@ -126,7 +157,7 @@ def main():
                            streaming=True)
     print(f'Starting downloads from example {env.args.skip_n_examples}')
     with ThreadPoolExecutor(max_workers=5) as executor:
-        executor.map(lambda example: process_example(example), 
+        executor.map(lambda example: process_example(example),
                      dataset.skip(env.args.skip_n_examples))
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
