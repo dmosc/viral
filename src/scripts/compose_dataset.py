@@ -113,42 +113,6 @@ def assemble_example(dataset, video_path_map):
     found_ids = set()
     total_to_find = len(video_path_map)
 
-    def _downsize_video(video_path):
-        target_resolution = (256, 256)
-        target_fps = 1
-        try:
-            with mp.VideoFileClip(str(video_path)) as clip:
-                if clip.size != target_resolution or clip.fps != target_fps:
-                    print('Downsizing video')
-                    width, height = clip.size
-                    scale = max(target_resolution[0] / width,
-                                target_resolution[1] / height)
-                    new_width, new_height = int(
-                        width * scale), int(height * scale)
-                    x1 = (new_width - target_resolution[0]) // 2
-                    y1 = (new_height - target_resolution[1]) // 2
-                    x2 = x1 + target_resolution[0]
-                    y2 = y1 + target_resolution[1]
-                    modified_clip = (clip.resized((new_width, new_height))
-                                     .cropped(x1=x1, y1=y1, x2=x2, y2=y2)
-                                     .with_fps(target_fps))
-                    modified_clip.write_videofile(
-                        str(video_path),
-                        codec="libx264",
-                        audio=False,
-                        logger=None
-                    )
-                else:
-                    print(f'Already downsized {video_id}')
-
-            video_bytes = None
-            if video_path.exists():
-                with open(video_path, 'rb') as file:
-                    video_bytes = file.read()
-            return video_bytes
-        except Exception as e:
-            print(f'Skipping video {video_id} due to error: {e}')
-
     for example in dataset:
         video_id = example['id']
         if video_id in video_path_map:
@@ -169,7 +133,8 @@ def assemble_example(dataset, video_path_map):
 
             video_bytes = None
             if video_path.exists():
-                video_bytes = _downsize_video(video_path)
+                with open(video_path, 'rb') as file:
+                    video_bytes = file.read()
 
             yield {
                 # --- USER & AUTHOR FIELDS ---
