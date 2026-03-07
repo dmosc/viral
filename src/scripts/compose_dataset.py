@@ -1,15 +1,17 @@
 import re
 import json
+import tempfile
 import numpy as np
 
 from PIL import Image
-from typing import Any, Optional, cast
+from typing import Any, Optional
 from datetime import datetime
-from datasets import load_dataset
+from datasets import load_dataset, concatenate_datasets
 from datasets import Dataset, Features, Value, IterableDataset, DatasetDict
 from pathlib import Path
 from datetime import timezone
 from dateutil import parser
+from huggingface_hub import HfApi
 from transformers import pipeline
 from torchcodec.decoders import VideoDecoder
 
@@ -93,11 +95,26 @@ class DataComposer:
         self.object_detector = pipeline(
             'object-detection', model=self.config.object_detection_model_id)
 
-    def build_dataset(self):
+    def build_dataset(self, chunk_size: int = 10_000):
         print('Building dataset...')
-        rows = list(self._compose_example(
-            self.base_dataset, self.videos_path_map))
-        self.dataset = Dataset.from_list(rows, features=DATASET_FEATURES)
+        hf_api = HfApi()
+        hf_api.create_repo(self.config.dataset_id,
+                           repo_type='dataset', exist_ok=True)
+        shards, rows, shard_idx = [], [], 0
+        for row in self._compose_example(self.base_dataset,
+                                         self.videos_path_map):
+            rows.append(row)
+            if len(rows) >= chunk_size:
+                shard = Dataset.from_list(rows, features=DATASET_FEATURES)
+                shards.append(shard)
+                self._upload_shard(shard, shard_idx, hf_api)
+                shard_idx += 1
+                rows = []
+        if rows:
+            shard = Dataset.from_list(rows, features=DATASET_FEATURES)
+            shards.append(shard)
+            self._upload_shard(shard, shard_idx, hf_api)
+        self.dataset = concatenate_datasets(shards)
 
     def add_target_labels(self):
         assert self.dataset, 'Call build_dataset() first before add_target_labels().'
@@ -235,6 +252,19 @@ class DataComposer:
                     return
                 elif len(processed_ids) % 100 == 0:
                     print(f'Loaded {len(processed_ids)} examples')
+
+    def _upload_shard(self, shard: Dataset, idx: int, api: HfApi):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir) / f'shard-{idx:05d}.parquet'
+            shard.to_parquet(str(tmp_path))
+            api.upload_file(
+                path_or_fileobj=str(tmp_path),
+                path_in_repo=f'data/train-{idx:05d}.parquet',
+                repo_id=self.config.dataset_id,
+                repo_type='dataset',
+            )
+        print(
+            f'Uploaded shard {idx} ({(idx + 1) * len(shard)} examples so far)')
 
     def _load_metadata(self, folder: Path, video_id: int) -> tuple[dict, dict]:
         user_data_path = folder / 'user.json'
