@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from transformers import AutoModel
 
-from .config import Config
+from ..config import Config
 
 
 class ViralityPredictor(nn.Module):

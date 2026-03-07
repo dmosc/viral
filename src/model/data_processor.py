@@ -4,7 +4,7 @@ from typing import Dict, List, Any
 from torchcodec.decoders import VideoDecoder
 from transformers import AutoTokenizer, AutoImageProcessor
 
-from .config import Config
+from ..config import Config
 
 
 class DataProcessor:

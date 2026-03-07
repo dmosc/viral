@@ -7,4 +7,13 @@ class Config:
     num_frames = 16
     checkpoint_path = "./checkpoints"
     num_workers = 4
+    base_dataset_id = 'The-data-company/TikTok-10M'
     dataset_id = 'rodmosc/viral'
+    data_path = 'data/videos'
+    engagement_weights = {
+        'shares': 4,
+        'saves': 3,
+        'comments': 2,
+        'likes': 1
+    }
+    p_virality_threshold = 0.95

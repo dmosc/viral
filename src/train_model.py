@@ -1,7 +1,7 @@
 from datasets import load_dataset
 from transformers import Trainer, TrainingArguments
 
-from model.config import Config
+from config import Config
 from model.virality_predictor import ViralityPredictor
 from model.data_processor import DataProcessor
 
