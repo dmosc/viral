@@ -92,8 +92,8 @@ class TikTokScraper:
 
     def _resize_video_for_model(self, path: Path):
         """Resizes and crops video to 256x256 @ 1fps for VideoMAE/ViT arms."""
-        target_res = (256, 256)
-        target_fps = 1
+        target_res = self.config.video_resolution
+        target_fps = self.config.num_frames
 
         with mp.VideoFileClip(str(path)) as clip:
             if clip.size == target_res and clip.fps == target_fps:
