@@ -2,6 +2,7 @@ import re
 import json
 import numpy as np
 
+from PIL import Image
 from typing import Any, Optional, cast
 from datetime import datetime
 from datasets import load_dataset
@@ -9,6 +10,8 @@ from datasets import Dataset, Features, Value, IterableDataset, DatasetDict
 from pathlib import Path
 from datetime import timezone
 from dateutil import parser
+from transformers import pipeline
+from torchcodec.decoders import VideoDecoder
 
 from src.config import Config
 
@@ -76,6 +79,7 @@ DATASET_FEATURES = Features({
     'engagement_score': Value('float64'),
     'view_velocity_score': Value('float64'),
     'is_viral': Value('int64'),
+    'detected_objects': Value('string'),
 })
 
 
@@ -86,15 +90,14 @@ class DataComposer:
         self.base_dataset = load_dataset(self.config.base_dataset_id,
                                          split='train', streaming=True)
         self.dataset: Optional[Dataset] = None
+        self.object_detector = pipeline(
+            'object-detection', model=self.config.object_detection_model_id)
 
     def build_dataset(self):
         print('Building dataset...')
-        self.dataset = cast(Dataset, Dataset.from_generator(
-            self._compose_example,
-            gen_kwargs={'dataset': self.base_dataset,
-                        'videos_path_map': self.videos_path_map},
-            features=DATASET_FEATURES
-        ))
+        rows = list(self._compose_example(
+            self.base_dataset, self.videos_path_map))
+        self.dataset = Dataset.from_list(rows, features=DATASET_FEATURES)
 
     def add_target_labels(self):
         assert self.dataset, 'Call build_dataset() first before add_target_labels().'
@@ -123,11 +126,12 @@ class DataComposer:
             print(
                 f"Success! Pushed {len(self.dataset)} examples to {self.config.dataset_id}")
 
-    def _get_videos_path_map(self):
+    def _get_videos_path_map(self) -> dict[int, Path]:
         data_path = Path(self.config.data_path)
         video_map = {}
         if not data_path.exists():
-            return
+            raise ValueError(
+                f'Couldn\t load {data_path} so there\'s no data to compose the dataset.')
         for path in data_path.iterdir():
             if path.is_dir():
                 for file in path.iterdir():
@@ -145,6 +149,7 @@ class DataComposer:
                 folder = Path(videos_path_map[video_id])
                 user_data, video_data = self._load_metadata(folder, video_id)
                 video_bytes = self._load_video_bytes(folder, video_id)
+                detected_objects = self._get_video_objects(video_bytes)
                 plays = int(video_data.get(
                     'view_count', example.get('play_count') or 0))
                 shares = int(video_data.get('repost_count',
@@ -188,6 +193,7 @@ class DataComposer:
                     'challenges': example.get('challenges'),
                     'share_cover': example.get('share_cover'),
                     'video_bytes': video_bytes,
+                    'detected_objects': detected_objects,
                     # --- Music specs ---
                     'music_title': video_data.get('track_name', example.get('music_title')),
                     'music_album': video_data.get('album_name', example.get('music_album')),
@@ -227,6 +233,8 @@ class DataComposer:
                 processed_ids.add(video_id)
                 if len(processed_ids) >= len(videos_path_map):
                     return
+                elif len(processed_ids) % 100 == 0:
+                    print(f'Loaded {len(processed_ids)} examples')
 
     def _load_metadata(self, folder: Path, video_id: int) -> tuple[dict, dict]:
         user_data_path = folder / 'user.json'
@@ -240,6 +248,23 @@ class DataComposer:
     def _load_video_bytes(self, folder: Path, video_id: int) -> bytes | None:
         video_path = folder / f'{video_id}.mp4'
         return video_path.read_bytes() if video_path.exists() else None
+
+    def _get_video_objects(self, video_bytes: Optional[bytes]) -> str:
+        """Extracts a middle frame and returns a unique string of detected objects."""
+        if not video_bytes:
+            return ""
+        try:
+            decoder = VideoDecoder(video_bytes)
+            middle_idx = len(decoder) // 2
+            frame_tensor = decoder.get_frame_at(middle_idx).data
+            frame_image = Image.fromarray(
+                frame_tensor.permute(1, 2, 0).numpy())
+            results = self.object_detector(frame_image, threshold=0.85)
+            objects = sorted(list(set(result['label'] for result in results)))
+            return ",".join(objects)
+        except Exception as exception:
+            print(f'Object detection failed: {exception}')
+        return ""
 
     def _calculate_engagement_and_velocity(self, plays: int, shares: int,
                                            saves: int, comments: int,

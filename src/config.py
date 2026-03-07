@@ -3,6 +3,7 @@ class Config:
     num_tabular_features: int = 5
     text_model_id = 'distilbert-base-uncased'
     video_model_id = 'MCG-NJU/videomae-base'
+    object_detection_model_id = 'facebook/detr-resnet-50'
     max_text_len = 256
     num_frames = 16
     checkpoint_path = "data/checkpoints"
