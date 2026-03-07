@@ -21,9 +21,24 @@ class DataProcessor:
                                 max_length=self.config.max_text_len, return_tensors="pt")
         videos = torch.stack([self._decode_video(b)
                              for b in examples['video_bytes']])
-        tabular = torch.tensor([[float(f), float(v), float(d)] for f, v, d in zip(
-            examples['author_follower_count'], examples['author_video_count'],
-            examples['duration'])], dtype=torch.float32)
+        tabular = torch.tensor([
+            [
+                float(follower_count or 0),
+                float(video_count or 0),
+                float(video_duration or 0),
+                float(view_velocity_score or 0),
+                float(engagement_score or 0)
+            ] for follower_count, video_count, video_duration, view_velocity_score, engagement_score in zip(
+                examples['author_follower_count'],
+                examples['author_video_count'],
+                examples['duration'],
+                examples['view_velocity_score'],
+                examples['engagement_score']
+            )
+        ], dtype=torch.float32)
+        assert (
+            tabular.shape[-1] == self.config.num_tabular_features
+        ), 'Tabular branch is generating more features than expected num_tabular_features'
         return {
             "input_ids": tokens["input_ids"],
             "attention_mask": tokens["attention_mask"],

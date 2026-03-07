@@ -1,9 +1,9 @@
 from datasets import load_dataset
 from transformers import Trainer, TrainingArguments
 
-from config import Config
-from model.virality_predictor import ViralityPredictor
-from model.data_processor import DataProcessor
+from .config import Config
+from .model.virality_predictor import ViralityPredictor
+from .model.data_processor import DataProcessor
 
 
 def main():
