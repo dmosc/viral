@@ -43,7 +43,6 @@ DATASET_FEATURES = Features({
     'share_enabled': Value('bool'),
     'stitch_enabled': Value('bool'),
     'duration': Value('int64'),
-    'playlist_id': Value('int64'),
     'diversification_id': Value('int64'),
     'challenges': Value('string'),
     'share_cover': Value('string'),
@@ -146,17 +145,26 @@ class DataComposer:
                 f"Success! Pushed {len(self.dataset)} examples to {self.config.dataset_id}")
 
     def _get_videos_path_map(self) -> dict[int, Path]:
+        """Build a map from video ID to folder only if all required files exist."""
         data_path = Path(self.config.data_path)
-        video_map = {}
+        video_map: dict[int, Path] = {}
         if not data_path.exists():
             raise ValueError(
-                f'Couldn\t load {data_path} so there\'s no data to compose the dataset.')
+                f'Couldn\'t load {data_path} so there\'s no data to compose the dataset.')
         for path in data_path.iterdir():
-            if path.is_dir():
-                for file in path.iterdir():
-                    match = re.search(r'(\d+).mp4', file.name)
-                    if match:
-                        video_map[int(match.group(1))] = path
+            if not path.is_dir():
+                continue
+            user_json = path / 'user.json'
+            if not user_json.exists():
+                continue
+            for file in path.iterdir():
+                match = re.search(r'(\d+)\.mp4', file.name)
+                if not match:
+                    continue
+                video_id = int(match.group(1))
+                meta_json = path / f'{video_id}.json'
+                if meta_json.exists():
+                    video_map[video_id] = path
         return video_map
 
     def _compose_example(self, dataset: IterableDataset,
@@ -166,15 +174,6 @@ class DataComposer:
             video_id = int(example['id'])
             if video_id in videos_path_map:
                 folder = Path(videos_path_map[video_id])
-                user_data_path = folder / 'user.json'
-                video_data_path = folder / f'{video_id}.json'
-                video_path = folder / f'{video_id}.mp4'
-                if (
-                    not user_data_path.exists() or
-                    not video_data_path.exists() or
-                    not video_path.exists()
-                ):
-                    continue
                 user_data, video_data = self._load_metadata(folder, video_id)
                 video_bytes = self._load_video_bytes(folder, video_id)
                 detected_objects = self._get_video_objects(video_bytes)
@@ -218,7 +217,6 @@ class DataComposer:
                     'share_enabled': self._parse_bool(example.get('share_enabled')),
                     'stitch_enabled': self._parse_bool(example.get('stitch_enabled')),
                     'duration': example.get('duration'),
-                    'playlist_id': example.get('playlist_id'),
                     'diversification_id': int(example.get('diversification_id', 0)) if example.get('diversification_id') else None,
                     'challenges': example.get('challenges'),
                     'share_cover': example.get('share_cover'),
