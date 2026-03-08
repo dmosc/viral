@@ -13,6 +13,9 @@ class ViralityPredictor(nn.Module):
         self.text_model = AutoModel.from_pretrained(self.config.text_model_id)
         self.video_model = AutoModel.from_pretrained(
             self.config.video_model_id)
+        # Freeze the pretrained models
+        self.text_model.requires_grad_(False)
+        self.video_model.requires_grad_(False)
         self.tabular_mlp = nn.Sequential(
             nn.Linear(config.num_tabular_features, self.config.d_model),
             nn.ReLU(),

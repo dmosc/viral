@@ -18,7 +18,7 @@ def main():
         output_dir=config.checkpoint_path,
         per_device_train_batch_size=4,
         gradient_accumulation_steps=4,
-        fp16=True,
+        max_grad_norm=1.0,
         num_train_epochs=3,
         logging_steps=10,
         save_strategy='epoch',
