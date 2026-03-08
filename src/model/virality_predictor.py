@@ -13,11 +13,6 @@ class ViralityPredictor(nn.Module):
         self.text_model = AutoModel.from_pretrained(self.config.text_model_id)
         self.video_model = AutoModel.from_pretrained(
             self.config.video_model_id)
-        # TODO(dmosc): Remove once ready to train.
-        for param in self.text_model.parameters():
-            param.requires_grad = False
-        for param in self.video_model.parameters():
-            param.requires_grad = False
         self.tabular_mlp = nn.Sequential(
             nn.Linear(config.num_tabular_features, self.config.d_model),
             nn.ReLU(),

@@ -30,7 +30,6 @@ class DataProcessor:
             text_features, padding="max_length", truncation=True,
             max_length=self.config.max_text_len, return_tensors="pt"
         )
-        #
         pixel_value_features = torch.stack([self._decode_video(b)
                                             for b in examples['video_bytes']])
         tabular_features = torch.tensor([
