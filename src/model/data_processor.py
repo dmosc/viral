@@ -16,8 +16,7 @@ class DataProcessor:
             config.video_model_id)
 
     def process_batch(self, examples: Dict[str, List[Any]]) -> Dict[str, torch.Tensor]:
-        # Text features: combine descriptions, tags, and categorical metadata
-        # into a rich prompt.
+        # Prepare the inputs for each of the model arms (text, image, tabular).
         text_features = [
             f"Title: {d} Challenges: {ch} Music: {mt} by {ma} Objects: {obj} Location: {city} {pn}"
             for d, ch, mt, ma, obj, city, pn in zip(
@@ -38,37 +37,38 @@ class DataProcessor:
         assert (
             tabular_features.shape[-1] == self.config.num_tabular_features
         ), 'Tabular branch is generating more features than expected num_tabular_features'
+        # Stack the two regression targets into a single tensor.
+        engagement_score = torch.tensor(examples['engagement_score'],
+                                        dtype=torch.float32).view(-1, 1)
+        view_velocity_score = torch.tensor(examples['view_velocity_score'],
+                                           dtype=torch.float32).view(-1, 1)
+        labels = torch.cat([engagement_score, view_velocity_score], dim=1)
         return {
             "input_ids": text_tokens["input_ids"],
             "attention_mask": text_tokens["attention_mask"],
             "pixel_values": pixel_value_features,
             "tabular_features": tabular_features,
-            "labels": torch.tensor(examples['is_viral'], dtype=torch.float32).view(-1, 1)
+            "labels": labels,
         }
 
     def _process_tabular_row(self, examples: Dict, i: int) -> List[float]:
-        # Numerical scaling: Log1p for power-law social stats
-        social_stats = [
+        # Apply log-scaling to social stats to manage the extreme skewness and
+        # heavy tails.
+        author_stats = [
             np.log1p(float(examples['author_follower_count'][i] or 0)),
             np.log1p(float(examples['author_following_count'][i] or 0)),
             np.log1p(float(examples['author_total_heart_count'][i] or 0)),
             np.log1p(float(examples['author_video_count'][i] or 0)),
             np.log1p(float(examples['author_friend_count'][i] or 0)),
-            np.log1p(float(examples['play_count'][i] or 0)),
-            np.log1p(float(examples['digg_count'][i] or 0)),
-            np.log1p(float(examples['comment_count'][i] or 0)),
-            np.log1p(float(examples['share_count'][i] or 0)),
-            np.log1p(float(examples['save_count'][i] or 0)),
-            np.log1p(float(examples['collect_count'][i] or 0)),
         ]
+        # Scaling video specs by common expected magnitudes and ratios to
+        # statically normalize against expected baseline.
         video_specs = [
             float(examples['duration'][i] or 0) / 60.0,
             float(examples['width'][i] or 0) / 1080.0,
             float(examples['height'][i] or 0) / 1920.0,
             float(examples['aspect_ratio'][i] or 0),
             float(examples['vq_score'][i] or 0),
-            float(examples['engagement_score'][i] or 0),
-            float(examples['view_velocity_score'][i] or 0),
         ]
         binary_features = [
             1.0 if examples['user_verified'][i] else 0.0,
@@ -77,11 +77,12 @@ class DataProcessor:
             1.0 if examples['share_enabled'][i] else 0.0,
             1.0 if examples['stitch_enabled'][i] else 0.0,
         ]
+        # Scaling by the respective magnitudes of weekdays (7) and hours (24).
         temporal_features = [
             float(examples['day_of_week'][i] or 0) / 7.0,
             float(examples['hour_of_day'][i] or 0) / 23.0,
         ]
-        return social_stats + video_specs + binary_features + temporal_features
+        return author_stats + video_specs + binary_features + temporal_features
 
     def _decode_video(self, video_bytes: bytes) -> torch.Tensor:
         try:

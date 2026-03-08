@@ -25,9 +25,9 @@ class ViralityPredictor(nn.Module):
             nn.Linear(self.late_fusion_1, self.config.d_model),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(self.config.d_model, 1)
+            nn.Linear(self.config.d_model, 2)
         )
-        self.loss = nn.BCEWithLogitsLoss()
+        self.loss = nn.MSELoss()
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
                 pixel_values: torch.Tensor, tabular_features: torch.Tensor,
