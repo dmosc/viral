@@ -19,3 +19,25 @@ class Config:
     }
     p_virality_threshold = 0.95
     video_resolution = (224, 224)
+    required_dims = [
+        'author_follower_count',
+        'author_following_count',
+        'author_total_heart_count',
+        'author_video_count',
+        'author_friend_count',
+        'duration',
+        'width',
+        'height',
+        'aspect_ratio',
+        'vq_score',
+        'user_verified',
+        'is_private',
+        'is_ad',
+        'share_enabled',
+        'stitch_enabled',
+        'day_of_week',
+        'hour_of_day',
+        'engagement_score',
+        'view_velocity_score',
+        'video_bytes'
+    ]

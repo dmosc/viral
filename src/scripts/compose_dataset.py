@@ -104,7 +104,8 @@ class DataComposer:
         shards, rows, shard_idx = [], [], 0
         for row in self._compose_example(self.base_dataset,
                                          self.videos_path_map):
-            rows.append(row)
+            if self._required_fields_populated(row):
+                rows.append(row)
             if len(rows) >= chunk_size:
                 shard = Dataset.from_list(rows, features=DATASET_FEATURES)
                 shards.append(shard)
@@ -263,6 +264,10 @@ class DataComposer:
                     return
                 elif len(processed_ids) % 100 == 0:
                     print(f'Loaded {len(processed_ids)} examples')
+
+    def _required_fields_populated(self, example: dict) -> bool:
+        return all(
+            example.get(dim) is not None for dim in self.config.required_dims)
 
     def _upload_shard(self, shard: Dataset, idx: int, api: HfApi):
         with tempfile.TemporaryDirectory() as tmpdir:
