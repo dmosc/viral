@@ -77,7 +77,11 @@ class DataProcessor:
             1.0 if examples['share_enabled'][i] else 0.0,
             1.0 if examples['stitch_enabled'][i] else 0.0,
         ]
-        return social_stats + video_specs + binary_features
+        temporal_features = [
+            float(examples['day_of_week'][i] or 0) / 7.0,
+            float(examples['hour_of_day'][i] or 0) / 23.0,
+        ]
+        return social_stats + video_specs + binary_features + temporal_features
 
     def _decode_video(self, video_bytes: bytes) -> torch.Tensor:
         try:

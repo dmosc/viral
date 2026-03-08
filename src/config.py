@@ -1,6 +1,6 @@
 class Config:
     d_model: int = 64
-    num_tabular_features: int = 23
+    num_tabular_features: int = 25
     text_model_id = 'distilbert-base-uncased'
     video_model_id = 'MCG-NJU/videomae-base'
     object_detection_model_id = 'facebook/detr-resnet-50'

@@ -166,6 +166,15 @@ class DataComposer:
             video_id = int(example['id'])
             if video_id in videos_path_map:
                 folder = Path(videos_path_map[video_id])
+                user_data_path = folder / 'user.json'
+                video_data_path = folder / f'{video_id}.json'
+                video_path = folder / f'{video_id}.mp4'
+                if (
+                    not user_data_path.exists() or
+                    not video_data_path.exists() or
+                    not video_path.exists()
+                ):
+                    continue
                 user_data, video_data = self._load_metadata(folder, video_id)
                 video_bytes = self._load_video_bytes(folder, video_id)
                 detected_objects = self._get_video_objects(video_bytes)
