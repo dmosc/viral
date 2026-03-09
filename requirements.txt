@@ -12,3 +12,4 @@ torchcodec==0.10.0
 accelerate==1.13.0
 timm==1.0.25
 huggingface-hub==1.6.0
+scikit-learn==1.8.0
