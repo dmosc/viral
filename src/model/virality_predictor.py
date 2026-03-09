@@ -28,7 +28,8 @@ class ViralityPredictor(nn.Module):
             nn.Linear(self.late_fusion_1, self.config.d_model),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(self.config.d_model, 2)
+            nn.Linear(self.config.d_model, 2),
+            nn.Softplus()
         )
         self.loss = nn.MSELoss()
 

@@ -38,10 +38,12 @@ class DataProcessor:
             tabular_features.shape[-1] == self.config.num_tabular_features
         ), 'Tabular branch is generating more features than expected num_tabular_features'
         # Stack the two regression targets into a single tensor.
-        engagement_score = torch.tensor(examples['engagement_score'],
-                                        dtype=torch.float32).view(-1, 1)
-        view_velocity_score = torch.tensor(examples['view_velocity_score'],
-                                           dtype=torch.float32).view(-1, 1)
+        engagement_score = torch.tensor([
+            np.log1p(v) for v in examples['engagement_score']
+        ], dtype=torch.float32).view(-1, 1)
+        view_velocity_score = torch.tensor([
+            np.log1p(v) for v in examples['view_velocity_score']
+        ], dtype=torch.float32).view(-1, 1)
         labels = torch.cat([engagement_score, view_velocity_score], dim=1)
         return {
             "input_ids": text_tokens["input_ids"],
@@ -55,11 +57,14 @@ class DataProcessor:
         # Apply log-scaling to social stats to manage the extreme skewness and
         # heavy tails.
         author_stats = [
-            np.log1p(float(examples['author_follower_count'][i] or 0)),
-            np.log1p(float(examples['author_following_count'][i] or 0)),
-            np.log1p(float(examples['author_total_heart_count'][i] or 0)),
-            np.log1p(float(examples['author_video_count'][i] or 0)),
-            np.log1p(float(examples['author_friend_count'][i] or 0)),
+            np.log1p(
+                max(0.0, float(examples['author_follower_count'][i] or 0))),
+            np.log1p(
+                max(0.0, float(examples['author_following_count'][i] or 0))),
+            np.log1p(
+                max(0.0, float(examples['author_total_heart_count'][i] or 0))),
+            np.log1p(max(0.0, float(examples['author_video_count'][i] or 0))),
+            np.log1p(max(0.0, float(examples['author_friend_count'][i] or 0))),
         ]
         # Scaling video specs by common expected magnitudes and ratios to
         # statically normalize against expected baseline.
