@@ -124,15 +124,15 @@ class DataComposer:
             f'Calculating {self.config.p_virality_threshold} percentile for virality...')
         engagement_scores = np.array(self.dataset['engagement_score'])
         view_velocity_scores = np.array(self.dataset['view_velocity_score'])
-        engagement_threshold = np.quantile(
-            engagement_scores, self.config.p_virality_threshold)
-        view_velocity_threshold = np.quantile(
-            view_velocity_scores, self.config.p_virality_threshold)
+        combined_scores = engagement_scores / engagement_scores.max() + view_velocity_scores / \
+            view_velocity_scores.max()
+        combined_threshold = np.quantile(
+            combined_scores, self.config.p_virality_threshold)
 
         def _label_viral(batch):
             batch['is_viral'] = [
-                1 if (engagement >= engagement_threshold and view_velocity >=
-                      view_velocity_threshold) else 0
+                1 if (engagement / engagement_scores.max() + view_velocity /
+                      view_velocity_scores.max()) >= combined_threshold else 0
                 for engagement, view_velocity in zip(batch['engagement_score'], batch['view_velocity_score'])
             ]
             return batch
@@ -202,11 +202,11 @@ class DataComposer:
                     'user_verified': self._parse_bool(user_data.get('is_verified', example.get('user_verified'))),
                     'is_private': self._parse_bool(user_data.get('is_private')),
                     'account_create_time': self._parse_to_timestamp_s(user_data.get('account_create_time')),
-                    'author_follower_count': user_data.get('author_follower_count'),
-                    'author_following_count': user_data.get('author_following_count'),
-                    'author_total_heart_count': user_data.get('author_total_heart_count'),
-                    'author_video_count': user_data.get('author_video_count'),
-                    'author_friend_count': user_data.get('author_friend_count'),
+                    'author_follower_count': max(0.0, user_data.get('author_follower_count')),
+                    'author_following_count': max(0.0, user_data.get('author_following_count')),
+                    'author_total_heart_count': max(0.0, user_data.get('author_total_heart_count')),
+                    'author_video_count': max(0.0, user_data.get('author_video_count')),
+                    'author_friend_count': max(0.0, user_data.get('author_friend_count')),
                     # --- Metadata ---
                     'id': video_id,
                     'url': example.get('url'),
