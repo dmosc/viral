@@ -15,12 +15,9 @@ def make_compute_metrics(engagement_max: float, velocity_max: float,
         # Invert log1p applied during preprocessing
         pred_engagement = np.expm1(logits[:, 0])
         pred_velocity = np.expm1(logits[:, 1])
-        true_engagement = np.expm1(labels[:, 0])
-        true_velocity = np.expm1(labels[:, 1])
+        true_viral = labels[:, 2].astype(bool)
         pred_viral = (pred_engagement / engagement_max +
                       pred_velocity / velocity_max) >= combined_threshold
-        true_viral = (true_engagement / engagement_max +
-                      true_velocity / velocity_max) >= combined_threshold
         return {
             "accuracy": (pred_viral == true_viral).mean(),
             "precision": precision_score(true_viral, pred_viral,

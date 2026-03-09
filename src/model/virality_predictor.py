@@ -31,7 +31,6 @@ class ViralityPredictor(nn.Module):
             nn.Linear(self.config.d_model, 2),
             nn.Softplus()
         )
-        self.loss = nn.MSELoss()
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
                 pixel_values: torch.Tensor, tabular_features: torch.Tensor,
@@ -48,5 +47,9 @@ class ViralityPredictor(nn.Module):
         logits = self.classifier(late_fusion)
         output = {"logits": logits}
         if labels is not None:
-            output["loss"] = self.loss(logits, labels)
+            targets, is_viral = labels[:, :2], labels[:, 2]
+            weights = 1.0 + \
+                (self.config.viral_loss_weight - 1.0) * is_viral
+            mse_loss = ((logits - targets) ** 2).mean(dim=1)
+            output["loss"] = (weights * mse_loss).mean()
         return output

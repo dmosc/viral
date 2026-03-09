@@ -37,14 +37,17 @@ class DataProcessor:
         assert (
             tabular_features.shape[-1] == self.config.num_tabular_features
         ), 'Tabular branch is generating more features than expected num_tabular_features'
-        # Stack the two regression targets into a single tensor.
+        # Stack regression targets + is_viral weight flag into a single tensor.
         engagement_score = torch.tensor([
             np.log1p(v) for v in examples['engagement_score']
         ], dtype=torch.float32).view(-1, 1)
         view_velocity_score = torch.tensor([
             np.log1p(v) for v in examples['view_velocity_score']
         ], dtype=torch.float32).view(-1, 1)
-        labels = torch.cat([engagement_score, view_velocity_score], dim=1)
+        is_viral = torch.tensor(
+            examples['is_viral'], dtype=torch.float32).view(-1, 1)
+        labels = torch.cat(
+            [engagement_score, view_velocity_score, is_viral], dim=1)
         return {
             "input_ids": text_tokens["input_ids"],
             "attention_mask": text_tokens["attention_mask"],
