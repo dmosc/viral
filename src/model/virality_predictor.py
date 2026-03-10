@@ -7,12 +7,13 @@ from src.config import Config
 
 
 class ViralityPredictor(nn.Module):
-    def __init__(self, config: Config, tabular_means: torch.Tensor,
-                 tabular_stds: torch.Tensor):
+    def __init__(self, config: Config, tabular_means=None, tabular_stds=None):
         super().__init__()
         self.config = config
-        self.register_buffer('tabular_means', tabular_means)
-        self.register_buffer('tabular_stds', tabular_stds)
+        self.register_buffer('tabular_means',
+                             tabular_means if tabular_means is not None else torch.zeros(config.num_tabular_features))
+        self.register_buffer('tabular_stds',
+                             tabular_stds if tabular_stds is not None else torch.ones(config.num_tabular_features))
         self.text_model = AutoModel.from_pretrained(self.config.text_model_id)
         self.video_model = AutoModel.from_pretrained(
             self.config.video_model_id)
@@ -59,7 +60,7 @@ class ViralityPredictor(nn.Module):
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
                 pixel_values: torch.Tensor, tabular_features: torch.Tensor,
-                labels: torch.Tensor | None) -> dict[str, torch.Tensor]:
+                labels: torch.Tensor | None = None) -> dict[str, torch.Tensor]:
         # Text: Extract [CLS] token (index 0)
         text_output = self.text_model(
             input_ids=input_ids,
@@ -93,3 +94,15 @@ class ViralityPredictor(nn.Module):
             output["loss"] = (loss_reg * self.config.regression_loss_contribution) + \
                              (loss_cls * self.config.classification_loss_contribution)
         return output
+
+    @torch.no_grad()
+    def predict_scores(self, **kwargs):
+        self.eval()
+        output = self.forward(**kwargs)
+        regression_preds = torch.expm1(output['regression_logits'])
+        viral_prob = torch.sigmoid(output['classification_logits'])
+        return {
+            "engagement": regression_preds[:, 0],
+            "velocity": regression_preds[:, 1],
+            "viral_prob": viral_prob.squeeze(-1)
+        }
