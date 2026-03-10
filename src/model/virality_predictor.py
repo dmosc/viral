@@ -7,9 +7,12 @@ from src.config import Config
 
 
 class ViralityPredictor(nn.Module):
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, tabular_means: torch.Tensor,
+                 tabular_stds: torch.Tensor):
         super().__init__()
         self.config = config
+        self.register_buffer('tabular_means', tabular_means)
+        self.register_buffer('tabular_stds', tabular_stds)
         self.text_model = AutoModel.from_pretrained(self.config.text_model_id)
         self.video_model = AutoModel.from_pretrained(
             self.config.video_model_id)

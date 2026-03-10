@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, average_precision_score
 from transformers import Trainer, TrainingArguments, EvalPrediction
@@ -32,9 +33,16 @@ def make_compute_metrics(threshold: float = 0.5):
 
 def main():
     config = Config()
-    model = ViralityPredictor(config)
     data_processor = DataProcessor(config)
     dataset_splits, stats = data_processor.get_dataset_splits()
+    assert (
+        data_processor.tabular_means is not None and data_processor.tabular_stds is not None
+    ), 'Stats for tabular arm are missing.'
+    model = ViralityPredictor(
+        config,
+        torch.tensor(data_processor.tabular_means, dtype=torch.float32),
+        torch.tensor(data_processor.tabular_stds, dtype=torch.float32)
+    )
     training_args = TrainingArguments(
         output_dir=config.checkpoint_path,
         per_device_train_batch_size=config.batch_size,

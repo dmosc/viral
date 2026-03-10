@@ -40,8 +40,10 @@ class DataProcessor:
         raw_features = [self._process_tabular_row(
             sample_subset, i) for i in range(sample_size)]
         feature_matrix = np.array(raw_features)
-        self.tabular_means = np.mean(feature_matrix, axis=0)
-        self.tabular_stds = np.std(feature_matrix, axis=0)
+        self.tabular_means = torch.tensor(
+            np.mean(feature_matrix, axis=0), dtype=torch.float32)
+        self.tabular_stds = torch.tensor(
+            np.std(feature_matrix, axis=0), dtype=torch.float32)
         # 2. Virality Threshold Stats
         engagement_scores = np.array(dataset['engagement_score'])
         velocity_scores = np.array(dataset['view_velocity_score'])
@@ -72,17 +74,15 @@ class DataProcessor:
         )
         pixel_value_features = torch.stack([self._decode_video(b)
                                             for b in examples['video_bytes']])
-        raw_tabular = np.array([
-            self._process_tabular_row(examples, i) for i in range(len(examples['id']))
-        ])
+        raw_tabular = np.array([self._process_tabular_row(
+            examples, i) for i in range(len(examples['id']))])
+        tensor_tabular = torch.tensor(raw_tabular, dtype=torch.float32)
         # Z-score normalization
-        if self.tabular_means is not None:
-            normalized_tabular = (
-                raw_tabular - self.tabular_means) / (self.tabular_stds + 1e-6)
-        else:
-            normalized_tabular = raw_tabular
-        tabular_features = torch.tensor(
-            normalized_tabular, dtype=torch.float32)
+        assert (
+            self.tabular_means is not None and self.tabular_stds is not None
+        ), 'Tabular stats are not available!'
+        tabular_features = (
+            tensor_tabular - self.tabular_means) / (self.tabular_stds + 1e-6)
         assert (
             tabular_features.shape[-1] == self.config.num_tabular_features
         ), f'Expected {self.config.num_tabular_features} features, got {tabular_features.shape[-1]}'
