@@ -19,7 +19,8 @@ class ViralityPredictor(nn.Module):
         self.tabular_mlp = nn.Sequential(
             nn.Linear(config.num_tabular_features, self.config.d_model),
             nn.ReLU(),
-            nn.Linear(config.d_model, config.d_model)
+            nn.Linear(config.d_model, config.d_model),
+            nn.Dropout(self.config.dropout)
         )
         # DistilBERT hidden size + VideoMAE hidden size + tabular MLP
         self.late_fusion = self.text_model.config.hidden_size + \
@@ -50,7 +51,7 @@ class ViralityPredictor(nn.Module):
         self.register_buffer("pos_weight", torch.tensor(
             [config.viral_loss_weight]))
         self.classification_loss = nn.BCEWithLogitsLoss(
-            pos_weight=self.pos_weight)
+            pos_weight=torch.tensor(self.pos_weight))
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
                 pixel_values: torch.Tensor, tabular_features: torch.Tensor,

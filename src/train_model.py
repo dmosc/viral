@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, average_precision_score
 from transformers import Trainer, TrainingArguments, EvalPrediction
 
@@ -9,8 +8,8 @@ from .model.data_processor import DataProcessor
 
 
 def make_compute_metrics(threshold: float = 0.5):
-    def compute_metrics(eval_pred: EvalPrediction):
-        (_, viral_logits), labels = eval_pred
+    def compute_metrics(eval_prediction: EvalPrediction):
+        (_, viral_logits), labels = eval_prediction
         viral_probs = 1 / (1 + np.exp(-viral_logits))
         is_viral_target = labels[:, 2].astype(int)
         is_viral_prediction = (viral_probs >= threshold).astype(int)
