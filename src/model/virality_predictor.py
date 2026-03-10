@@ -34,13 +34,13 @@ class ViralityPredictor(nn.Module):
             nn.Linear(self.config.d_model, self.config.d_model // 2),
             nn.ReLU(),
             nn.Linear(self.config.d_model // 2, 1),
-            nn.Softplus()
+            nn.ReLU()
         )
         self.velocity_head = nn.Sequential(
             nn.Linear(self.config.d_model, self.config.d_model // 2),
             nn.ReLU(),
             nn.Linear(self.config.d_model // 2, 1),
-            nn.Softplus()
+            nn.ReLU()
         )
         self.classification_head = nn.Sequential(
             nn.Linear(self.config.d_model, self.config.d_model // 2),
