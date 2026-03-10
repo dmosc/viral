@@ -2,7 +2,7 @@ class Config:
     epochs = 10
     d_model = 512
     dropout = 0.2
-    num_tabular_features: int = 17
+    num_tabular_features: int = 19
     text_model_id = 'distilbert-base-uncased'
     video_model_id = 'MCG-NJU/videomae-base'
     object_detection_model_id = 'facebook/detr-resnet-50'

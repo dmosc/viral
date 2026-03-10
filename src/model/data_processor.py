@@ -1,10 +1,9 @@
+import math
 import torch
 import numpy as np
-
 from typing import Dict, List, Any
 from torchcodec.decoders import VideoDecoder
 from transformers import AutoTokenizer, AutoImageProcessor
-
 from src.config import Config
 
 
@@ -14,11 +13,12 @@ class DataProcessor:
         self.tokenizer = AutoTokenizer.from_pretrained(config.text_model_id)
         self.processor = AutoImageProcessor.from_pretrained(
             config.video_model_id)
+        self.image_mean = torch.tensor(
+            self.processor.image_mean).view(1, 3, 1, 1)
 
     def process_batch(self, examples: Dict[str, List[Any]]) -> Dict[str, torch.Tensor]:
-        # Prepare the inputs for each of the model arms (text, image, tabular).
         text_features = [
-            f"Title: {d} Challenges: {ch} Music: {mt} by {ma} Objects: {obj} Location: {city} {pn}"
+            f"[CLS] [TITLE] {d} [MUSIC] {mt} by {ma} [CHALLENGES] {ch} [OBJECTS] {obj} [LOC] {city} {pn}"
             for d, ch, mt, ma, obj, city, pn in zip(
                 examples['description'], examples['challenges'],
                 examples['music_title'], examples['music_author_name'],
@@ -37,12 +37,11 @@ class DataProcessor:
         assert (
             tabular_features.shape[-1] == self.config.num_tabular_features
         ), 'Tabular branch is generating more features than expected num_tabular_features'
-        # Stack regression targets + is_viral weight flag into a single tensor.
         engagement_score = torch.tensor([
-            np.log1p(v) for v in examples['engagement_score']
+            np.log1p(max(0.0, v)) for v in examples['engagement_score']
         ], dtype=torch.float32).view(-1, 1)
         view_velocity_score = torch.tensor([
-            np.log1p(v) for v in examples['view_velocity_score']
+            np.log1p(max(0.0, v)) for v in examples['view_velocity_score']
         ], dtype=torch.float32).view(-1, 1)
         is_viral = torch.tensor(
             examples['is_viral'], dtype=torch.float32).view(-1, 1)
@@ -69,13 +68,11 @@ class DataProcessor:
             np.log1p(max(0.0, float(examples['author_video_count'][i] or 0))),
             np.log1p(max(0.0, float(examples['author_friend_count'][i] or 0))),
         ]
-        # Scaling video specs by common expected magnitudes and ratios to
-        # statically normalize against expected baseline.
         video_specs = [
-            float(examples['duration'][i] or 0) / 60.0,
-            float(examples['width'][i] or 0) / 1080.0,
-            float(examples['height'][i] or 0) / 1920.0,
-            float(examples['aspect_ratio'][i] or 0),
+            float(examples['duration'][i] or 0),
+            float(examples['width'][i] or 0),
+            float(examples['height'][i] or 0),
+            float(examples['aspect_ratio'][i] or 1.0),
             float(examples['vq_score'][i] or 0),
         ]
         binary_features = [
@@ -85,10 +82,14 @@ class DataProcessor:
             1.0 if examples['share_enabled'][i] else 0.0,
             1.0 if examples['stitch_enabled'][i] else 0.0,
         ]
-        # Scaling by the respective magnitudes of weekdays (7) and hours (24).
+        # Cyclical encoding for temporal data
+        hour = float(examples['hour_of_day'][i] or 0)
+        day = float(examples['day_of_week'][i] or 0)
         temporal_features = [
-            float(examples['day_of_week'][i] or 0) / 7.0,
-            float(examples['hour_of_day'][i] or 0) / 23.0,
+            math.sin(2 * math.pi * hour / 24.0),
+            math.cos(2 * math.pi * hour / 24.0),
+            math.sin(2 * math.pi * day / 7.0),
+            math.cos(2 * math.pi * day / 7.0)
         ]
         return author_stats + video_specs + binary_features + temporal_features
 
@@ -107,7 +108,6 @@ class DataProcessor:
             )
             return processed["pixel_values"].squeeze(0)
         except Exception:
-            # Zero-pad using targets from config:
-            # [frames, channels, resolution, resolution]
-            return torch.zeros((self.config.num_frames, 3,
-                                *self.config.video_resolution))
+            padding = torch.ones(
+                (self.config.num_frames, 3, *self.config.video_resolution))
+            return padding * self.image_mean
