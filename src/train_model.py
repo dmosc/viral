@@ -32,20 +32,7 @@ def main():
     config = Config()
     model = ViralityPredictor(config)
     data_processor = DataProcessor(config)
-    raw_dataset = load_dataset(config.dataset_id)
-    dataset_splits = raw_dataset['train'].train_test_split(
-        test_size=0.1, seed=42)
-
-    # Compute thresholds from the training split before transforms are applied
-    train_split = dataset_splits['train']
-    engagement_scores = np.array(train_split['engagement_score'])
-    velocity_scores = np.array(train_split['view_velocity_score'])
-    combined_scores = engagement_scores / engagement_scores.max() + velocity_scores / \
-        velocity_scores.max()
-    combined_threshold = np.quantile(
-        combined_scores, config.p_virality_threshold)
-
-    dataset_splits.set_transform(data_processor.process_batch)
+    dataset_splits, stats = data_processor.get_dataset_splits()
     training_args = TrainingArguments(
         output_dir=config.checkpoint_path,
         per_device_train_batch_size=4,
@@ -65,9 +52,9 @@ def main():
         train_dataset=dataset_splits['train'],
         eval_dataset=dataset_splits['test'],
         compute_metrics=make_compute_metrics(
-            engagement_max=float(engagement_scores.max()),
-            velocity_max=float(velocity_scores.max()),
-            combined_threshold=combined_threshold,
+            engagement_max=float(stats['engagement_scores'].max()),
+            velocity_max=float(stats['velocity_scores'].max()),
+            combined_threshold=stats['combined_threshold'],
         ),
     )
     trainer.train()

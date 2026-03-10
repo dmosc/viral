@@ -3,6 +3,7 @@ import torch
 import numpy as np
 from typing import Dict, List, Any
 from torchcodec.decoders import VideoDecoder
+from datasets import load_dataset, Dataset, DatasetDict
 from transformers import AutoTokenizer, AutoImageProcessor
 from src.config import Config
 
@@ -10,13 +11,35 @@ from src.config import Config
 class DataProcessor:
     def __init__(self, config: Config):
         self.config = config
+        self.dataset: Dataset = load_dataset(self.config.dataset_id)
         self.tokenizer = AutoTokenizer.from_pretrained(config.text_model_id)
         self.processor = AutoImageProcessor.from_pretrained(
-            config.video_model_id)
+            self.config.video_model_id)
         self.image_mean = torch.tensor(
             self.processor.image_mean).view(1, 3, 1, 1)
 
-    def process_batch(self, examples: Dict[str, List[Any]]) -> Dict[str, torch.Tensor]:
+    def get_dataset_splits(self) -> tuple[DatasetDict, dict[str, Any]]:
+        dataset_splits = self.dataset['train'].train_test_split(
+            test_size=self.config.test_split, seed=self.config.seed)
+        train_dataset_stats = self._compute_dataset_stats(
+            dataset_splits['train'])
+        dataset_splits.set_transform(self._process_batch)
+        return dataset_splits, train_dataset_stats
+
+    def _compute_dataset_stats(self, dataset: Dataset) -> dict[str, Any]:
+        engagement_scores = np.array(dataset['engagement_score'])
+        velocity_scores = np.array(dataset['view_velocity_score'])
+        combined_scores = engagement_scores / engagement_scores.max() + velocity_scores / \
+            velocity_scores.max()
+        combined_threshold = np.quantile(
+            combined_scores, self.config.p_virality_threshold)
+        return {
+            'engagement_scores': engagement_scores,
+            'velocity_scores': velocity_scores,
+            'combined_threshold': combined_threshold
+        }
+
+    def _process_batch(self, examples: Dict[str, List[Any]]) -> Dict[str, torch.Tensor]:
         text_features = [
             f"[CLS] [TITLE] {d} [MUSIC] {mt} by {ma} [CHALLENGES] {ch} [OBJECTS] {obj} [LOC] {city} {pn}"
             for d, ch, mt, ma, obj, city, pn in zip(
