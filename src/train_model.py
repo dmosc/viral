@@ -52,8 +52,8 @@ def main():
         train_dataset=dataset_splits['train'],
         eval_dataset=dataset_splits['test'],
         compute_metrics=make_compute_metrics(
-            engagement_max=float(stats['engagement_scores'].max()),
-            velocity_max=float(stats['velocity_scores'].max()),
+            engagement_max=stats['max_engagement'],
+            velocity_max=stats['max_velocity'],
             combined_threshold=stats['combined_threshold'],
         ),
     )

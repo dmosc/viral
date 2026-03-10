@@ -14,28 +14,46 @@ class DataProcessor:
         self.dataset: Dataset = load_dataset(self.config.dataset_id)
         self.tokenizer = AutoTokenizer.from_pretrained(config.text_model_id)
         self.processor = AutoImageProcessor.from_pretrained(
-            self.config.video_model_id)
+            config.video_model_id)
         self.image_mean = torch.tensor(
             self.processor.image_mean).view(1, 3, 1, 1)
+        # State for normalization
+        self.tabular_means = None
+        self.tabular_stds = None
 
     def get_dataset_splits(self) -> tuple[DatasetDict, dict[str, Any]]:
         dataset_splits = self.dataset['train'].train_test_split(
-            test_size=self.config.test_split, seed=self.config.seed)
-        train_dataset_stats = self._compute_dataset_stats(
-            dataset_splits['train'])
+            train_size=self.config.train_size, test_size=self.config.test_split,
+            seed=self.config.seed)
+        # Compute stats on raw training data
+        train_stats = self._compute_dataset_stats(dataset_splits['train'])
+        # Apply the transform to all splits
         dataset_splits.set_transform(self._process_batch)
-        return dataset_splits, train_dataset_stats
+        return dataset_splits, train_stats
 
     def _compute_dataset_stats(self, dataset: Dataset) -> dict[str, Any]:
+        # 1. Tabular Normalization Stats
+        sample_size = min(len(dataset), 1000)
+        sample_indices = np.random.choice(len(dataset), sample_size,
+                                          replace=False)
+        sample_subset = dataset.select(sample_indices)
+        raw_features = [self._process_tabular_row(
+            sample_subset, i) for i in range(sample_size)]
+        feature_matrix = np.array(raw_features)
+        self.tabular_means = np.mean(feature_matrix, axis=0)
+        self.tabular_stds = np.std(feature_matrix, axis=0)
+        # 2. Virality Threshold Stats
         engagement_scores = np.array(dataset['engagement_score'])
         velocity_scores = np.array(dataset['view_velocity_score'])
-        combined_scores = engagement_scores / engagement_scores.max() + velocity_scores / \
-            velocity_scores.max()
+        max_engagement = engagement_scores.max()
+        max_velocity = velocity_scores.max()
+        combined_scores = (engagement_scores / max_engagement) + \
+            (velocity_scores / max_velocity)
         combined_threshold = np.quantile(
             combined_scores, self.config.p_virality_threshold)
         return {
-            'engagement_scores': engagement_scores,
-            'velocity_scores': velocity_scores,
+            'max_engagement': max_engagement,
+            'max_velocity': max_velocity,
             'combined_threshold': combined_threshold
         }
 
@@ -54,12 +72,20 @@ class DataProcessor:
         )
         pixel_value_features = torch.stack([self._decode_video(b)
                                             for b in examples['video_bytes']])
-        tabular_features = torch.tensor([
+        raw_tabular = np.array([
             self._process_tabular_row(examples, i) for i in range(len(examples['id']))
-        ], dtype=torch.float32)
+        ])
+        # Z-score normalization
+        if self.tabular_means is not None:
+            normalized_tabular = (
+                raw_tabular - self.tabular_means) / (self.tabular_stds + 1e-6)
+        else:
+            normalized_tabular = raw_tabular
+        tabular_features = torch.tensor(
+            normalized_tabular, dtype=torch.float32)
         assert (
             tabular_features.shape[-1] == self.config.num_tabular_features
-        ), 'Tabular branch is generating more features than expected num_tabular_features'
+        ), f'Expected {self.config.num_tabular_features} features, got {tabular_features.shape[-1]}'
         engagement_score = torch.tensor([
             np.log1p(max(0.0, v)) for v in examples['engagement_score']
         ], dtype=torch.float32).view(-1, 1)
@@ -78,9 +104,7 @@ class DataProcessor:
             "labels": labels,
         }
 
-    def _process_tabular_row(self, examples: Dict, i: int) -> List[float]:
-        # Apply log-scaling to social stats to manage the extreme skewness and
-        # heavy tails.
+    def _process_tabular_row(self, examples: Any, i: int) -> List[float]:
         author_stats = [
             np.log1p(
                 max(0.0, float(examples['author_follower_count'][i] or 0))),
@@ -105,7 +129,6 @@ class DataProcessor:
             1.0 if examples['share_enabled'][i] else 0.0,
             1.0 if examples['stitch_enabled'][i] else 0.0,
         ]
-        # Cyclical encoding for temporal data
         hour = float(examples['hour_of_day'][i] or 0)
         day = float(examples['day_of_week'][i] or 0)
         temporal_features = [

@@ -2,6 +2,7 @@ class Config:
     seed = 42
     epochs = 10
     d_model = 512
+    train_size = 0.2
     test_split = 0.1
     dropout = 0.2
     num_tabular_features: int = 19
