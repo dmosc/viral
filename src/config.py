@@ -1,6 +1,7 @@
 class Config:
     epochs = 10
-    d_model: int = 64
+    d_model = 512
+    dropout = 0.2
     num_tabular_features: int = 17
     text_model_id = 'distilbert-base-uncased'
     video_model_id = 'MCG-NJU/videomae-base'

@@ -22,34 +22,51 @@ class ViralityPredictor(nn.Module):
             nn.Linear(config.d_model, config.d_model)
         )
         # DistilBERT hidden size + VideoMAE hidden size + tabular MLP
-        self.late_fusion_1 = self.text_model.config.hidden_size + \
+        self.late_fusion = self.text_model.config.hidden_size + \
             self.video_model.config.hidden_size + self.config.d_model
-        self.classifier = nn.Sequential(
-            nn.Linear(self.late_fusion_1, self.config.d_model),
+        self.late_fusion_mlp = nn.Sequential(
+            nn.Linear(self.late_fusion, self.config.d_model),
             nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(self.config.d_model, 2),
+            nn.Dropout(self.config.dropout)
+        )
+        self.engagement_head = nn.Sequential(
+            nn.Linear(self.config.d_model, self.config.d_model // 2),
+            nn.ReLU(),
+            nn.Linear(self.config.d_model // 2, 1),
             nn.Softplus()
         )
+        self.velocity_head = nn.Sequential(
+            nn.Linear(self.config.d_model, self.config.d_model // 2),
+            nn.ReLU(),
+            nn.Linear(self.config.d_model // 2, 1),
+            nn.Softplus()
+        )
+        self.loss = nn.HuberLoss(reduction='none')
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
                 pixel_values: torch.Tensor, tabular_features: torch.Tensor,
                 labels: torch.Tensor | None) -> dict[str, torch.Tensor]:
         # Text: Extract [CLS] token (index 0)
-        text_output = self.text_model(input_ids=input_ids,
-                                      attention_mask=attention_mask).last_hidden_state[:, 0, :]
+        text_output = self.text_model(
+            input_ids=input_ids,
+            attention_mask=attention_mask
+        ).last_hidden_state[:, 0, :]
         # Video: Global average pool across spatial-temporal tokens
         video_output = self.video_model(
-            pixel_values=pixel_values).last_hidden_state.mean(dim=1)
+            pixel_values=pixel_values
+        ).last_hidden_state.mean(dim=1)
         tabular_output = self.tabular_mlp(tabular_features)
         late_fusion = torch.cat(
-            [text_output, video_output, tabular_output], dim=-1)
-        logits = self.classifier(late_fusion)
+            [text_output, video_output, tabular_output], dim=-1
+        )
+        shared_features = self.late_fusion_mlp(late_fusion)
+        eng_pred = self.engagement_head(shared_features)
+        vel_pred = self.velocity_head(shared_features)
+        logits = torch.cat([eng_pred, vel_pred], dim=-1)
         output = {"logits": logits}
         if labels is not None:
             targets, is_viral = labels[:, :2], labels[:, 2]
-            weights = 1.0 + \
-                (self.config.viral_loss_weight - 1.0) * is_viral
-            mse_loss = ((logits - targets) ** 2).mean(dim=1)
-            output["loss"] = (weights * mse_loss).mean()
+            weights = 1.0 + (self.config.viral_loss_weight - 1.0) * is_viral
+            base_loss = self.loss(logits, targets).mean(dim=1)
+            output["loss"] = (weights * base_loss).mean()
         return output
