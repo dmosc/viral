@@ -51,7 +51,7 @@ class ViralityPredictor(nn.Module):
         self.register_buffer("pos_weight", torch.tensor(
             [config.viral_loss_weight]))
         self.classification_loss = nn.BCEWithLogitsLoss(
-            pos_weight=torch.tensor(self.pos_weight))
+            pos_weight=self.pos_weight)
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
                 pixel_values: torch.Tensor, tabular_features: torch.Tensor,
