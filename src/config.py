@@ -1,4 +1,5 @@
 class Config:
+    epochs = 10
     d_model: int = 64
     num_tabular_features: int = 17
     text_model_id = 'distilbert-base-uncased'
@@ -20,7 +21,7 @@ class Config:
     p_virality_threshold = 0.95
     # Viral examples are upweighted by this factor to counter class
     # imbalance during training.
-    viral_loss_weight = p_virality_threshold / (1 - p_virality_threshold)
+    viral_loss_weight = int(p_virality_threshold / (1 - p_virality_threshold))
     video_resolution = (224, 224)
     required_dims = [
         'author_follower_count',
