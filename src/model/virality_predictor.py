@@ -17,9 +17,10 @@ class ViralityPredictor(nn.Module):
         self.text_model.requires_grad_(False)
         self.video_model.requires_grad_(False)
         self.tabular_mlp = nn.Sequential(
-            nn.Linear(config.num_tabular_features, self.config.d_model),
+            nn.Linear(self.config.num_tabular_features, self.config.d_model),
+            nn.LayerNorm(self.config.d_model),
             nn.ReLU(),
-            nn.Linear(config.d_model, config.d_model),
+            nn.Linear(self.config.d_model, self.config.d_model),
             nn.Dropout(self.config.dropout)
         )
         # DistilBERT hidden size + VideoMAE hidden size + tabular MLP
