@@ -1,8 +1,9 @@
 class Config:
     seed = 42
     epochs = 10
+    batch_size = 8
     d_model = 512
-    train_size = 0.2
+    train_size = 0.5
     test_split = 0.1
     dropout = 0.2
     num_tabular_features: int = 19
@@ -26,6 +27,8 @@ class Config:
     # Viral examples are upweighted by this factor to counter class
     # imbalance during training.
     viral_loss_weight = int(p_virality_threshold / (1 - p_virality_threshold))
+    regression_loss_contribution = 0.3
+    classification_loss_contribution = 1 - regression_loss_contribution
     video_resolution = (224, 224)
     required_dims = [
         'author_follower_count',

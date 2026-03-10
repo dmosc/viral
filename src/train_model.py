@@ -1,6 +1,6 @@
 import numpy as np
-from datasets import load_dataset
-from sklearn.metrics import f1_score, precision_score, recall_score
+import torch
+from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, average_precision_score
 from transformers import Trainer, TrainingArguments, EvalPrediction
 
 from .config import Config
@@ -8,22 +8,25 @@ from .model.virality_predictor import ViralityPredictor
 from .model.data_processor import DataProcessor
 
 
-def make_compute_metrics(engagement_max: float, velocity_max: float,
-                         combined_threshold: float):
+def make_compute_metrics(threshold: float = 0.5):
     def compute_metrics(eval_pred: EvalPrediction):
-        logits, labels = eval_pred
-        # Invert log1p applied during preprocessing
-        pred_engagement = np.expm1(logits[:, 0])
-        pred_velocity = np.expm1(logits[:, 1])
-        true_viral = labels[:, 2].astype(bool)
-        pred_viral = (pred_engagement / engagement_max +
-                      pred_velocity / velocity_max) >= combined_threshold
+        (_, viral_logits), labels = eval_pred
+        viral_probs = 1 / (1 + np.exp(-viral_logits))
+        is_viral_target = labels[:, 2].astype(int)
+        is_viral_prediction = (viral_probs >= threshold).astype(int)
+        precision = precision_score(
+            is_viral_target, is_viral_prediction, zero_division=0)
+        recall = recall_score(
+            is_viral_target, is_viral_prediction, zero_division=0)
+        f1 = f1_score(is_viral_target, is_viral_prediction, zero_division=0)
+        auc_roc = roc_auc_score(is_viral_target, viral_probs)
+        auc_pr = average_precision_score(is_viral_target, viral_probs)
         return {
-            "accuracy": (pred_viral == true_viral).mean(),
-            "precision": precision_score(true_viral, pred_viral,
-                                         zero_division=0),
-            "recall": recall_score(true_viral, pred_viral, zero_division=0),
-            "f1": f1_score(true_viral, pred_viral, zero_division=0),
+            "precision": precision,
+            "recall": recall,
+            "f1": f1,
+            "auc_roc": auc_roc,
+            "auc_pr": auc_pr,
         }
     return compute_metrics
 
@@ -35,13 +38,17 @@ def main():
     dataset_splits, stats = data_processor.get_dataset_splits()
     training_args = TrainingArguments(
         output_dir=config.checkpoint_path,
-        per_device_train_batch_size=4,
+        per_device_train_batch_size=config.batch_size,
         gradient_accumulation_steps=4,
         max_grad_norm=1.0,
         num_train_epochs=config.epochs,
+        weight_decay=0.01,
         logging_steps=10,
         save_strategy='epoch',
         eval_strategy='epoch',
+        load_best_model_at_end=True,
+        metric_for_best_model="f1",
+        greater_is_better=True,
         dataloader_num_workers=config.num_workers,
         remove_unused_columns=False,
         report_to="none"
@@ -51,12 +58,9 @@ def main():
         args=training_args,
         train_dataset=dataset_splits['train'],
         eval_dataset=dataset_splits['test'],
-        compute_metrics=make_compute_metrics(
-            engagement_max=stats['max_engagement'],
-            velocity_max=stats['max_velocity'],
-            combined_threshold=stats['combined_threshold'],
-        ),
+        compute_metrics=make_compute_metrics(threshold=0.7),
     )
+    print(f"Starting training on {len(dataset_splits['train'])} samples...")
     trainer.train()
 
 

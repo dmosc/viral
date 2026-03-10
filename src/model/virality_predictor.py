@@ -41,7 +41,16 @@ class ViralityPredictor(nn.Module):
             nn.Linear(self.config.d_model // 2, 1),
             nn.Softplus()
         )
-        self.loss = nn.HuberLoss(reduction='none')
+        self.classification_head = nn.Sequential(
+            nn.Linear(self.config.d_model, self.config.d_model // 2),
+            nn.ReLU(),
+            nn.Linear(self.config.d_model // 2, 1)
+        )
+        self.regression_loss = nn.HuberLoss(reduction='none')
+        self.register_buffer("pos_weight", torch.tensor(
+            [config.viral_loss_weight]))
+        self.classification_loss = nn.BCEWithLogitsLoss(
+            pos_weight=self.pos_weight)
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
                 pixel_values: torch.Tensor, tabular_features: torch.Tensor,
@@ -55,18 +64,27 @@ class ViralityPredictor(nn.Module):
         video_output = self.video_model(
             pixel_values=pixel_values
         ).last_hidden_state.mean(dim=1)
+        # Tabular: Run tabular features through the tabular MLP.
         tabular_output = self.tabular_mlp(tabular_features)
+        # Perform a late fusion of all branches.
         late_fusion = torch.cat(
             [text_output, video_output, tabular_output], dim=-1
         )
         shared_features = self.late_fusion_mlp(late_fusion)
-        eng_pred = self.engagement_head(shared_features)
-        vel_pred = self.velocity_head(shared_features)
-        logits = torch.cat([eng_pred, vel_pred], dim=-1)
-        output = {"logits": logits}
+        engagement_logits = self.engagement_head(shared_features)
+        velocity_logits = self.velocity_head(shared_features)
+        viral_logits = self.classification_head(shared_features)
+        output = {
+            "regression_logits": torch.cat([engagement_logits, velocity_logits],
+                                           dim=-1),
+            "classification_logits": viral_logits
+        }
         if labels is not None:
-            targets, is_viral = labels[:, :2], labels[:, 2]
-            weights = 1.0 + (self.config.viral_loss_weight - 1.0) * is_viral
-            base_loss = self.loss(logits, targets).mean(dim=1)
-            output["loss"] = (weights * base_loss).mean()
+            regression_targets = labels[:, :2]
+            is_viral_target = labels[:, 2].view(-1, 1)
+            loss_reg = self.regression_loss(
+                output["regression_logits"], regression_targets).mean()
+            loss_cls = self.classification_loss(viral_logits, is_viral_target)
+            output["loss"] = (loss_reg * self.config.regression_loss_contribution) + \
+                             (loss_cls * self.config.classification_loss_contribution)
         return output
