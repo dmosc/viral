@@ -7,7 +7,7 @@ class Config:
     d_model = 512
     train_size = 0.5
     test_size = 0.1
-    dropout = 0.2
+    dropout = 0.3
     num_tabular_features: int = 19
     text_model_id = 'distilbert-base-uncased'
     video_model_id = 'MCG-NJU/videomae-base'
@@ -28,8 +28,8 @@ class Config:
     p_virality_threshold = 0.95
     # Viral examples are upweighted by this factor to counter class
     # imbalance during training.
-    viral_loss_weight = int(p_virality_threshold / (1 - p_virality_threshold))
-    regression_loss_contribution = 0.1
+    viral_loss_weight = 12
+    regression_loss_contribution = 0.3
     classification_loss_contribution = 1 - regression_loss_contribution
     video_resolution = (224, 224)
     required_dims = [
