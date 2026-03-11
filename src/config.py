@@ -1,10 +1,12 @@
 class Config:
     seed = 42
     epochs = 15
-    batch_size = 8
+    batch_size = 32
+    gradient_accumulation_steps = 4
+    max_grad_norm = 1.0
     d_model = 512
     train_size = 0.5
-    test_split = 0.1
+    test_size = 0.1
     dropout = 0.2
     num_tabular_features: int = 19
     text_model_id = 'distilbert-base-uncased'

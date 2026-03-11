@@ -46,8 +46,8 @@ def main():
     training_args = TrainingArguments(
         output_dir=config.checkpoint_path,
         per_device_train_batch_size=config.batch_size,
-        gradient_accumulation_steps=4,
-        max_grad_norm=1.0,
+        gradient_accumulation_steps=config.gradient_accumulation_steps,
+        max_grad_norm=config.max_grad_norm,
         num_train_epochs=config.epochs,
         weight_decay=0.01,
         logging_steps=10,
