@@ -23,7 +23,7 @@ class DataProcessor:
 
     def get_dataset_splits(self) -> tuple[DatasetDict, dict[str, Any]]:
         dataset_splits = self.dataset['train'].train_test_split(
-            train_size=self.config.train_size, test_size=self.config.test_size,
+            train_size=self.config.train_size, test_size=self.config.test_split,
             seed=self.config.seed)
         # Compute stats on raw training data
         train_stats = self._compute_dataset_stats(dataset_splits['train'])

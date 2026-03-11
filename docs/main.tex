@@ -4,7 +4,9 @@
 \usepackage{tabularx}
 \usepackage{booktabs}
 \usepackage{amsmath}
+\usepackage{tikz}
 \usepackage[margin=1in]{geometry}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc}
 
 \title{Predicting the likelihood of a TikTok video going viral using intrinsic and extrinsic signals}
 \author{Oscar Rodriguez, Mahda Soltani, Ela Naz Sigin}
@@ -190,5 +192,178 @@ we use to stack-rank them in absolute $S_i$ terms and consider the top $5\%$ as
       0 & \text{Otherwise}
     \end{cases}
 \end{align}
+
+The reason we approached the concept of virality as described is rooted in
+convenience and usefulness. There are just too many dynamic forces that could
+influence the level of virality a video could reach. Many things like the
+current social discourse, ongoing political and economic events, or just sheer
+luck (being in the right place at the right time) could determine the success of
+any given video.
+
+Trying to capture such a broad range of "reasons" is likely near impossibility
+limits either due to data or resource constraints.
+
+Instead we try to condense a signal that's useful even for small accounts with
+the available data. We're thinking about small businesses/ content creators
+looking to amplify their social presence. Rolling out a video that's a couple of
+folds more viral relative to their expected baseline is considered a win!
+
+\subsection*{Model architecture}
+
+The architecture implements a mixture of state-of-the-art ML processing
+techniques for the different data modalities fed into the model; all these get
+fed through a late fusion module to finally produce 2 regression heads for the
+engagement and view velocity scores and 1 classification head for the virality
+class. We ultimately stitch them together to compute a final weighted loss to
+have the different output targets contribute in different quantities.
+
+\begin{figure}[ht]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tikzpicture}[
+    node distance=1.2cm and 1.5cm,
+    base_style/.style={rectangle, draw, rounded corners, thick, align=center, inner sep=10pt},
+    block/.style={base_style, fill=white, text width=3.2cm, minimum height=1.2cm},
+    input/.style={base_style, fill=gray!10, text width=3.2cm, minimum height=1.6cm},
+    branch/.style={base_style, fill=blue!5, text width=3.4cm, minimum height=1.4cm},
+    head/.style={base_style, fill=orange!5, text width=3.4cm, minimum height=1.4cm},
+    loss/.style={base_style, fill=red!5, text width=4.2cm, minimum height=1.8cm},
+    arrow/.style={-Stealth, thick}
+]
+% --- Inputs ---
+\node[input] (text_in) {\textbf{Text input}\\ \small \texttt{input\_ids} \\ \small (batch, 256)};
+\node[input, below=of text_in] (video_in) {\textbf{Video input}\\ \small \texttt{pixel\_values} \\ \small (batch, 16, 3, 224, 224)};
+\node[input, below=of video_in] (tab_in) {\textbf{Tabular input}\\ \small \texttt{tabular\_features} \\ \small (batch, 19)};
+% --- Modules ---
+\node[branch, right=of text_in] (text_mod) {\textbf{Text model}\\ \small Frozen DistilBERT \\ \small (hidden: 768)};
+\node[branch, right=of video_in] (video_mod) {\textbf{Video model}\\ \small Frozen VideoMAE \\ \small (hidden: 768)};
+\node[branch, right=of tab_in] (tab_mod) {\textbf{Tabular model}\\ \small 2-layer MLP \\ \small (d\_model: 512)};
+% --- Fusion ---
+\node[block, right=1.2cm of video_mod, fill=green!5, text width=3.8cm] (fusion) {
+    \textbf{Late fusion}\\ \small (dim=2048) \\
+};
+% --- Heads ---
+\node[head, right=1.5cm of fusion] (class_head) {\textbf{Classification head}\\ \small Virality logit \\ \small (batch, 1)};
+\node[head, above=0.5cm of class_head] (eng_head) {\textbf{Engagement head}\\ \small Regression logit \\ \small (batch, 1)};
+\node[head, below=0.5cm of class_head] (vel_head) {\textbf{Velocity head}\\ \small Regression logit \\ \small (batch, 1)};
+% --- Loss aggregator ---
+\node[loss, right=1.8cm of class_head] (total_loss) {
+    \textbf{Multi-task loss}\\
+    \scriptsize $\mathcal{L}_{\text{total}} = \lambda_{\text{reg}}\mathcal{L}_{\text{Huber}} + \lambda_{\text{cls}}\mathcal{L}_{\text{BCE}}$ \\
+    \small $\lambda_{\text{reg}}=0.1, \lambda_{\text{cls}}=0.9$
+};
+% --- Arrows ---
+\draw[arrow] (text_in) -- (text_mod);
+\draw[arrow] (video_in) -- (video_mod);
+\draw[arrow] (tab_in) -- (tab_mod);
+\draw[arrow] (text_mod.east) -- ++(0.5,0) |- (fusion.west);
+\draw[arrow] (video_mod.east) -- (fusion.west);
+\draw[arrow] (tab_mod.east) -- ++(0.5,0) |- (fusion.west);
+\draw[arrow] (fusion.east) -- ++(0.5,0) |- (eng_head.west);
+\draw[arrow] (fusion.east) -- (class_head.west);
+\draw[arrow] (fusion.east) -- ++(0.5,0) |- (vel_head.west);
+% --- Loss connections ---
+\draw[arrow, dashed, gray] (eng_head.east) -- ++(0.4,0) |- (total_loss.160);
+\draw[arrow, dashed, gray] (vel_head.east) -- ++(0.4,0) |- (total_loss.200);
+\draw[arrow, dashed, gray] (class_head.east) -- (total_loss.west);
+\end{tikzpicture}
+}
+\caption{End-to-end architecture: features are extracted from multimodal inputs,
+fused into a shared latent space, and passed to specialized heads. The final
+objective is a weighted combination of Huber regression loss and weighted binary
+cross-entropy (BCE) loss.}
+\end{figure}
+
+\subsubsection*{Data modalities}
+
+\subsubsection*{Text input}
+
+The text input is a concatenation of the different text dimensions in the
+following form:
+
+\begin{quote}
+    "[CLS] [TITLE] ... [MUSIC] ... [CHALLENGES] ... [OBJECTS] ... [LOC] ..."
+\end{quote}
+
+That we populate with the example's data and feed this into a pretrained, frozen
+\href{https://huggingface.co/distilbert/distilbert-base-uncased}{DistilBERT}
+backbone to extract a 768-dimensional semantic representation from the [CLS]
+token, capturing the semantics of all textual components from the example in a
+compact representation.
+
+\subsubsection*{Video input}
+
+During the dataset composition step, the original videos were downsized and
+downsampled to 224x224 pixels at 1 FPS to reduce processing requirements. From
+that transformed version, we sample 16 frames that we feed into a pretrained,
+frozen \href{https://huggingface.co/MCG-NJU/videomae-base}{VideoMAE} model to
+encode the video into a spatial-temporal embedding space.
+
+We then apply global average pooling across the output tokens to yield a
+768-dimensional embedding that captures both visual features and temporal
+dynamics.
+
+\subsubsection*{Tabular input}
+
+The tabular branch processes 19 heterogeneous features including author signals,
+temporal metadata, and video quality scores. To handle the varying scales of
+these inputs, we apply $log(1+x)$ scaling to high-variance author statistics and
+sine/cosine cyclic encoding to temporal features like hour of day to preserve
+periodic relationships. These are fed into a 2-layer MLP with layer
+normalization and dropout, projecting them into a learnable 512-dimensional
+space.
+
+\subsubsection*{Late fusion}
+
+In the late fusion module, we concatenate the 768-dimension text embedding,
+the 768-dimension video embedding, and the 512-dimension tabular output into a
+single 2048-dimensional vector. This combined representation is passed through a
+shared fusion MLP, which maps the multimodal features into a unified latent
+space of $d\_model=512$. This shared representation allows the model to learn
+complex inter-modal correlations before branching into specialized tasks.
+
+\subsubsection*{Multi-head targets}
+
+We employ a multi-head architecture to simultaneously model continuous and
+categorical virality signals. Each head progressively halves the upstream
+$d\_model$ to reduce dimensionality while increasing specialization:
+
+\begin{itemize}
+    \item Engagement and velocity heads: Two regression heads predict the
+    continuous engagement and view velocity scores.
+    \item Classification head: A single head predicts the probability of
+    virality, defined by the 95th percentile of the combined engagement and
+    velocity distribution.
+\end{itemize}
+
+\subsubsection*{Weighted loss target}
+
+The loss target is a composite of the different upstream heads, weighted to
+prioritize the primary classification task while using the regression heads as
+auxiliary signals:
+
+\begin{itemize}
+    \item Loss composition: We use Huber loss for the regression targets to
+    remain robust against the extreme outliers common in viral distributions,
+    and weighted BCE for the classification target.
+    \item Weighting strategy: We set $\lambda_{cls}=0.7$ and
+    $\lambda_{reg}=0.3$. This heavy weighting on classification ensures the
+    model focuses on detecting the rare viral events (upweighted by a factor of
+    $virality\_threshold / (1 - virality\_threshold)$ in the BCE loss), while
+    the regression task provides a continuous "popularity" signal that
+    stabilizes the shared latent space.
+\end{itemize}
+
+\section*{Experiments and results}
+
+\dots
+
+\section*{Next steps}
+
+\dots
+
+\section*{References}
+
+\dots
 
 \end{document}
