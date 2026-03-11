@@ -3,7 +3,8 @@
 \usepackage[colorlinks=true, urlcolor=blue, linkcolor=red]{hyperref}
 \usepackage{tabularx}
 \usepackage{booktabs}
-\usepackage[margin=1in]{geometry} % Standard margins for single column
+\usepackage{amsmath}
+\usepackage[margin=1in]{geometry}
 
 \title{Predicting the likelihood of a TikTok video going viral using intrinsic and extrinsic signals}
 \author{Oscar Rodriguez, Mahda Soltani, Ela Naz Sigin}
@@ -52,16 +53,16 @@ With all this raw data at hand, we produced a
 \href{https://huggingface.co/datasets/rodmosc/viral}{curated dataset} for
 our task. The following tables contain a detailed documentation of dataset
 dimensions, encompassing intrinsic content signals and extrinsic author/metadata
-signals.
+signals we deemed relevant to the problem.
 
-\begin{table}[h]
+\begin{table}
 \centering
 \small
 \begin{tabularx}{\textwidth}{|l l X l|}
     \hline
     \textbf{Dimension} & \textbf{Type} & \textbf{Description} & \textbf{Extraction / Treatment} \\
     \hline
-    \multicolumn{4}{|l|}{\textbf{User / author Signals}} \\
+    \multicolumn{4}{|l|}{\textbf{User / author signals}} \\
     \hline
     user\_id/username & ID/String & Unique identifier and handle of the creator & Scraped (TikTok web profile) \\
     user\_language & String & Configuration language of the account & Base dataset \\
@@ -74,7 +75,7 @@ signals.
 \end{tabularx}
 \end{table}
 
-\begin{table}[h]
+\begin{table}
 \centering
 \small
 \begin{tabularx}{\textwidth}{|l l X l|}
@@ -93,7 +94,7 @@ signals.
 \end{tabularx}
 \end{table}
 
-\begin{table}[h]
+\begin{table}
 \centering
 \small
 \begin{tabularx}{\textwidth}{|l l X l|}
@@ -106,7 +107,7 @@ signals.
 \end{tabularx}
 \end{table}
 
-\begin{table}[h]
+\begin{table}
 \centering
 \small
 \begin{tabularx}{\textwidth}{|l l X l|}
@@ -122,7 +123,7 @@ signals.
 \end{tabularx}
 \end{table}
 
-\begin{table}[h]
+\begin{table}
 \centering
 \small
 \begin{tabularx}{\textwidth}{|l l X l|}
@@ -136,5 +137,58 @@ signals.
     \hline
 \end{tabularx}
 \end{table}
+
+\subsection*{Task definition}
+
+The definition of virality (is\_viral) we produced is the target dimension we
+optimize for. It is meant to capture outliers relative to any given account
+stack-ranked in absolute terms with the goal of producing a signal that's useful
+for any account size.
+
+In order to recreate a mixed signal that fits the previous definition, we
+compute two scores for each video, \textbf{Engagement} and \textbf{View
+Velocity}.
+
+\begin{align}
+    \text{Engagement}_i &= \frac{\text{share\_count} \times w_0 + \text{save\_count} \times w_1 + \text{comment\_count} \times w_2 + \text{like\_count} \times w_3}{\text{play\_count}} \\
+\end{align}
+
+Where $Engagement$ is meant to represent a rate of amount of "interactions" a
+video had relative to its play count, making the score relative to the account
+size. As shown in the following graph, its expected to assume that accounts
+with a larger audience will most likely outperform its counterparts, making
+these videos seem more "viral" in absolute measurements.
+
+% TODO: Insert graph showing distribution of play count binned by account size.
+
+What this signal is meant to capture instead is a degree of "engagement" that's
+normalized to the audience size of any given account. To convey the idea, a
+small account with a few hundred users that produces a video that generates
+thousands of interactions would have a comparable engagement to an acconut with
+millions of users that accumulated hundredths of thousands of interactions
+instead.
+
+\begin{align}
+    \text{View Velocity}_i &= \frac{\text{play\_count}}{\text{delta\_hours}}
+\end{align}
+
+Where \textbf{View Velocity} normalizes the value of $play\_count$ by the total
+amount of time a video has been live collecting interactions. A video with a
+high "view velocity" is collecting interactions "faster" relative to the rest.
+
+% TODO: Insert graph showing distribution of play count binned by delta hours.
+
+We add together both measurements to produce a signal $S_i$ for each video that
+we use to stack-rank them in absolute $S_i$ terms and consider the top $5\%$ as
+"viral":
+
+\begin{align}
+    S_i &= \frac{\text{Engagement}_i}{\text{Engagement}_{max}} + \frac{\text{View\_Velocity}_i}{\text{View\_Velocity}_{max}} \\
+    y_{\text{is\_viral}}^{(i)} &= 
+    \begin{cases} 
+      1 & \text{if } S_i \geq F_S^{-1} (0.95) \\
+      0 & \text{Otherwise}
+    \end{cases}
+\end{align}
 
 \end{document}
