@@ -1,12 +1,140 @@
 % !TEX root = root.tex
-\documentclass[11pt, a4paper, twocolumn]{article}
+\documentclass[11pt, a4paper]{article} % Removed twocolumn
+\usepackage[colorlinks=true, urlcolor=blue, linkcolor=red]{hyperref}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage[margin=1in]{geometry} % Standard margins for single column
+
+\title{Predicting the likelihood of a TikTok video going viral using intrinsic and extrinsic signals}
+\author{Oscar Rodriguez, Mahda Soltani, Ela Naz Sigin}
+\date{March 10, 2026}
 
 \begin{document}
-\font\myfont=cmr12 at 40pt
-\title{{\myfont Predicting the likelihood of a TikTok video going viral using intrinsic and extrinsic signals}}
-\author{{Oscar Rodriguez, Mahda Soltani, Ela Naz Sigin}}
+
 \maketitle
 
-\section*{Abstract}
+\begin{abstract}
+    Social media platforms, like TikTok have become one of the dominant
+    channels through which information, entertainment, and political and
+    cultural trends propagate at scale. A defining feature of these
+    platforms is the extreme skewness in attention: while the vast majority
+    of uploaded videos receive little to no exposure, a small fraction
+    achieve \textit{viral} reach, accumulating orders of magnitude more
+    views within a short time window. This heavy-tailed distribution of
+    engagement naturally raises the question of how to operationalize and
+    predict “virality” in a principled way.
+
+    This investigation explores the use of Machine Learning techniques to
+    pin down a formal framework for the task of predicting the likelihood of
+    a TikTok video going viral using both intrinsic (e.g. video content) and
+    extrinsic features (e.g. video author).
+\end{abstract}
+
+\section*{Introduction}
+\dots
+
+\section*{Methods}
+
+This section goes over the different aspects of the Machine Learning pipeline
+that we crafted for the given task, starting from data processing all the way
+to the model architecture and reasoning behind each of the decisions.
+
+\subsection*{Data collection and processing}
+
+We started off with a base dataset called
+\href{https://huggingface.co/datasets/The-data-company/TikTok-10M}{TikTok-10M}
+from which we sourced a rich subset of examples that we complemented with a
+scraping step to download the videos and publisher accounts to extract
+additional signals (e.g. video bytes, aspect ratio, etc.) as well
+as account information (e.g. account statistics, publishing history, etc.).
+
+With all this raw data at hand, we produced a
+\href{https://huggingface.co/datasets/rodmosc/viral}{curated dataset} for
+our task. The following tables contain a detailed documentation of dataset
+dimensions, encompassing intrinsic content signals and extrinsic author/metadata
+signals.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{|l l X l|}
+    \hline
+    \textbf{Dimension} & \textbf{Type} & \textbf{Description} & \textbf{Extraction / Treatment} \\
+    \hline
+    \multicolumn{4}{|l|}{\textbf{User / author Signals}} \\
+    \hline
+    user\_id/username & ID/String & Unique identifier and handle of the creator & Scraped (TikTok web profile) \\
+    user\_language & String & Configuration language of the account & Base dataset \\
+    city & String & City where the video was posted from & Base dataset \\
+    user\_verified & Boolean & Verification status of the author & Scraped (TikTok web profile) \\
+    is\_private & Boolean & Whether the account is set to private & Scraped (TikTok web profile) \\
+    author\_stats & Float & Follower, heart, video, and friend counts & Scraped; $\log(1+x)$ scaled \\
+    account\_create\_time & Timestamp & When the user account was first created & Scraped (unix epoch) \\
+    \hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{|l l X l|}
+    \hline
+    \multicolumn{4}{|l|}{\textbf{Video content \& metadata}} \\
+    \hline
+    description & String & User-generated caption and hashtags & Base dataset \\
+    create\_time & Timestamp & Exact time of video publication & Base dataset (UTC) \\
+    temporal\_features & Float & Hour of day and Day of week & Sine/cosine cyclic encoding \\
+    is\_ad & Boolean & Flag for paid/sponsored content & Base dataset \\
+    duration & Integer & Total length of the video in seconds & Base dataset \\
+    challenges & String & Associated hashtag challenges or trends & Base dataset \\
+    video\_bytes & Binary & Scraped video resized to 256x256 @ 1fps & \texttt{yt-dlp} + \texttt{moviepy} \\
+    detected\_objects & String & Objects detected in video & pretrained facebook/detr-resnet-50 \\
+    \hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{|l l X l|}
+    \hline
+    \multicolumn{4}{|l|}{\textbf{Audio \& music specs}} \\
+    \hline
+    music\_info & String & Title, album, and author name of the audio & \texttt{yt-dlp} payload metadata \\
+    music\_play\_url & String & URL source for the audio file & Base dataset \\
+    \hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{|l l X l|}
+    \hline
+    \multicolumn{4}{|l|}{\textbf{Technical / video specs}} \\
+    \hline
+    resolution & Integer & Video width and height in pixels & \texttt{yt-dlp} (Best format) \\
+    aspect\_ratio & Float32 & Ratio of width to height & Calculated from payload \\
+    filesize & Integer & Total storage size of the video file & \texttt{yt-dlp} payload metadata \\
+    codecs & String & Video (vcodec) and audio (acodec) formats & \texttt{yt-dlp} payload metadata \\
+    vq\_score & Float64 & Visual quality score & Base dataset \\
+    \hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{|l l X l|}
+    \hline
+    \multicolumn{4}{|l|}{\textbf{Engagement stats \& target labels}} \\
+    \hline
+    interaction\_counts & Integer & Plays, likes, comments, shares, and saves & Scraped + base dataset \\
+    engagement\_score & Float64 & Weighted sum of interactions per view & Engineered; Weighted calculation \\
+    view\_velocity & Float64 & Views accumulated per hour since creation & Engineered; $\log(1+x)$ scaled \\
+    is\_viral & Binary & Classification ($P=0.95$) of engagement & Engineered (Quantile threshold) \\
+    \hline
+\end{tabularx}
+\end{table}
 
 \end{document}
