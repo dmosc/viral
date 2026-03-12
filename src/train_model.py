@@ -40,8 +40,8 @@ def main():
     ), 'Stats for tabular arm are missing.'
     model = ViralityPredictor(
         config,
-        torch.tensor(data_processor.tabular_means, dtype=torch.float32),
-        torch.tensor(data_processor.tabular_stds, dtype=torch.float32)
+        data_processor.tabular_means.detach().clone(),
+        data_processor.tabular_stds.detach().clone()
     )
     training_args = TrainingArguments(
         output_dir=config.checkpoint_path,
@@ -51,7 +51,7 @@ def main():
         num_train_epochs=config.epochs,
         weight_decay=config.weight_decay,
         lr_scheduler_type="cosine",
-        warmup_ratio=config.warmup_ratio,
+        warmup_steps=config.warmup_steps,
         logging_steps=10,
         save_strategy='epoch',
         eval_strategy='epoch',
