@@ -65,7 +65,8 @@ def main():
         args=training_args,
         train_dataset=dataset_splits['train'],
         eval_dataset=dataset_splits['test'],
-        compute_metrics=make_compute_metrics(threshold=0.7),
+        compute_metrics=make_compute_metrics(
+            threshold=config.confidence_threshold),
     )
     print(f"Starting training on {len(dataset_splits['train'])} samples...")
     trainer.train()

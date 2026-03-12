@@ -26,9 +26,11 @@ class Config:
         'likes': 1
     }
     p_virality_threshold = 0.95
+    confidence_threshold = 0.5
     # Viral examples are upweighted by this factor to counter class
     # imbalance during training.
-    viral_loss_weight = 12
+    viral_loss_weight = int(p_virality_threshold /
+                            (1 - p_virality_threshold) * 1.2)
     regression_loss_contribution = 0.3
     classification_loss_contribution = 1 - regression_loss_contribution
     video_resolution = (224, 224)
