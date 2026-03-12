@@ -155,19 +155,19 @@ Velocity}.
     \text{Engagement}_i &= \frac{\text{share\_count} \times w_0 + \text{save\_count} \times w_1 + \text{comment\_count} \times w_2 + \text{like\_count} \times w_3}{\text{play\_count}} \\
 \end{align}
 
-Where $Engagement$ is meant to represent a rate of amount of "interactions" a
-video had relative to its play count, making the score relative to the account
-size. As shown in the following graph, its expected to assume that accounts
-with a larger audience will most likely outperform its counterparts, making
-these videos seem more "viral" in absolute measurements.
+Where $Engagement$ is meant to represent a volume of "interactions" a video had
+relative to its play count, making the score relative to the account size. As
+shown in the following graph, its expected to assume that accounts with a larger
+audience will most likely outperform its counterparts, making these videos seem
+more "viral" in absolute measurements.
 
 % TODO: Insert graph showing distribution of play count binned by account size.
 
 What this signal is meant to capture instead is a degree of "engagement" that's
 normalized to the audience size of any given account. To convey the idea, a
-small account with a few hundred users that produces a video that generates
+small account with a few hundred followers that produces a video that generates
 thousands of interactions would have a comparable engagement to an acconut with
-millions of users that accumulated hundredths of thousands of interactions
+millions of followers that accumulated hundredths of thousands of interactions
 instead.
 
 \begin{align}
@@ -185,7 +185,7 @@ we use to stack-rank them in absolute $S_i$ terms and consider the top $5\%$ as
 "viral":
 
 \begin{align}
-    S_i &= \frac{\text{Engagement}_i}{\text{Engagement}_{max}} + \frac{\text{View\_Velocity}_i}{\text{View\_Velocity}_{max}} \\
+    S_i &= \frac{\text{Engagement}_i}{\text{Engagement}_{max}} + \frac{\text{View Velocity}_i}{\text{View Velocity}_{max}} \\
     y_{\text{is\_viral}}^{(i)} &= 
     \begin{cases} 
       1 & \text{if } S_i \geq F_S^{-1} (0.95) \\
@@ -212,10 +212,11 @@ folds more viral relative to their expected baseline is considered a win!
 
 The architecture implements a mixture of state-of-the-art ML processing
 techniques for the different data modalities fed into the model; all these get
-fed through a late fusion module to finally produce 2 regression heads for the
-engagement and view velocity scores and 1 classification head for the virality
-class. We ultimately stitch them together to compute a final weighted loss to
-have the different output targets contribute in different quantities.
+concatenated and passed through a late fusion module to finally produce 2
+regression heads for the engagement and view velocity scores and 1
+classification head for the virality class. We ultimately stitch them together
+to compute a final weighted loss to have the different output targets contribute
+in different quantities.
 
 \begin{figure}[ht]
 \centering
