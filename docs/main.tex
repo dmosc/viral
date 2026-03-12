@@ -356,11 +356,96 @@ auxiliary signals:
 
 \section*{Experiments and results}
 
-\dots
+To evaluate the performance of our multimodal approach, we track a suite of
+metrics that address both the regression of engagement signals and the
+classification of rare viral events. Given the high degree of class imbalance in
+our dataset (where viral videos constitute only the top 5\% of the
+distribution), we prioritize metrics that are robust to sparsity.
+
+\begin{itemize}
+    \item \textbf{Precision-Recall AUC (PR-AUC):} Our primary metric for the
+    classification head. Unlike ROC-AUC, PR-AUC does not reward the model for
+    correctly predicting the "non-viral" majority, providing a more honest view
+    of the model's ability to identify viral content.
+    \item \textbf{F1-Score:} Calculated at the 0.5 threshold to measure the
+    harmonic mean of precision and recall.
+    \item \textbf{ROC-AUC:} Used to measure the general separability of the
+    classes across all potential thresholds.
+\end{itemize}
+
+\subsection*{Training Dynamics}
+
+The training process spanned 15 epochs, utilizing a linear learning rate decay
+starting from $5 \times 10^{-5}$. We observed a consistent reduction in
+\texttt{eval\_loss} from 0.649 to 0.568 by epoch 15.
+
+The final evaluation yields an \textbf{ROC-AUC of 0.7875}, indicating that the
+model has developed a strong capability to distinguish between viral and
+non-viral content. However, the \textbf{PR-AUC of 0.1805} and
+\textbf{F1-score of 0.2452} highlight the inherent difficulty of the task. 
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.8\textwidth]{assets/loss.png}
+    \caption{Training and Evaluation loss across 15 epochs. The steady
+    convergence of the evaluation loss suggests effective latent space alignment
+    without immediate overfitting.}
+\end{figure}
+
+\subsection*{Analysis of results}
+
+\begin{table}[ht]
+\centering
+\label{table:results}
+\begin{tabular}{@{}llc@{}}
+    \toprule
+    \textbf{Metric} & \textbf{Target head} & \textbf{Value} \\ \midrule
+    Eval loss       & Multi-task composite & 0.5689         \\
+    ROC-AUC         & Classification       & 0.7875         \\
+    PR-AUC          & Classification       & 0.1805         \\
+    F1-Score        & Classification       & 0.2452         \\
+    Precision       & Classification       & 0.2092         \\
+    Recall          & Classification       & 0.2963         \\ \bottomrule
+\end{tabular}
+\caption{Model performance summary after 15 training epochs.}
+\end{table}
+
+While the ROC-AUC is promising, the low PR-AUC suggests that while the model
+ranks viral videos higher than non-viral ones, its absolute confidence in these
+predictions remains low. This is likely due to:
+
+\begin{enumerate}
+    \item \textbf{Intrinsic stochasticity:} Virality on TikTok is often driven
+    by external algorithmic amplification or "luck" (the cold-start problem)
+    that cannot be fully captured by content features alone.
+    \item \textbf{Information asymmetry:} Despite multimodal fusion, the frozen
+    encoders (DistilBERT and VideoMAE) may be missing platform-specific nuances
+    like trending audio or specific visual tropes that significantly impact
+    short-form video success.
+\end{enumerate}
 
 \section*{Next steps}
 
-\dots
+While the current model establishes a strong baseline for late-fusion multimodal
+learning, the discrepancy between ROC-AUC and PR-AUC suggests that the model is
+struggling with the extreme sparsity of viral signals. We propose the following
+directions for future research:
+
+\begin{itemize}
+    \item Run \textbf{ablation experiments} on the input features to surface
+    relevance (e.g. feeding everything but the video input, and viceversa).
+    \item An interesting follow-up we pondered on involves incorporating an
+    auxiliary regression task to predict the continuous growth size of
+    engagement overtime using a \textbf{Self-Exciting Hawkes Process} regression
+    module.
+\end{itemize}
+
+Our investigation demonstrates that while intrinsic content features provide a
+signal for virality, the task remains highly stochastic. By leveraging a
+multi-task learning framework with weighted losses, we effectively stabilized
+the training of a high-dimensional multimodal model, achieving a respectable
+ROC-AUC that serves as a foundation for future algorithmic discovery in social
+media dynamics.
 
 \section*{References}
 

@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1773211125.87745 "/Users/oscar/Desktop/Projects/cs229/viral/docs/main.tex" "main.pdf" "main" 1773211126.5992 0
-  "/Users/oscar/Desktop/Projects/cs229/viral/docs/main.tex" 1773211125.67532 16806 852b63bef93c13b103bd560cbd710fe8 ""
+["pdflatex"] 1773276206.97988 "/Users/oscar/Desktop/Projects/cs229/viral/docs/main.tex" "main.pdf" "main" 1773276207.62022 0
+  "/Users/oscar/Desktop/Projects/cs229/viral/docs/main.tex" 1773276207.16579 21040 b6904ab1ea64b9a588b1249ee5dfc688 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/tcrm1095.tfm" 1136768653 1536 02c06700a42be0f5a28664c7273f82e7 ""
@@ -164,9 +164,10 @@
   "/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1767686402 5467155 19efa205003f9ecad95fbbaa6ff24da1 ""
   "/usr/local/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1741450574 3345740 46b66fdb0378f7bf5921b5eabf1762b8 ""
   "/usr/local/texlive/2025/texmf.cnf" 1741450484 577 418a7058ec8e006d8704f60ecd22c938 ""
-  "main.aux" 1773211126.53077 528 4f2cdf5ac684e276430538f0d98d4787 "pdflatex"
-  "main.out" 1773211126.31082 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
-  "main.tex" 1773211125.67532 16806 852b63bef93c13b103bd560cbd710fe8 ""
+  "assets/loss.png" 1773275966.81031 170989 a2eb17cca7bfc1cdb638345c7dca76ae ""
+  "main.aux" 1773276207.56778 1032 2679a328fa84116408cab5d49fccf9d6 "pdflatex"
+  "main.out" 1773276207.27372 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "main.tex" 1773276207.16579 21040 b6904ab1ea64b9a588b1249ee5dfc688 ""
   (generated)
   "main.aux"
   "main.log"
