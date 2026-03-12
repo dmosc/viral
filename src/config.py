@@ -32,6 +32,11 @@ class Config:
     regression_loss_contribution = 0.3
     classification_loss_contribution = 1 - regression_loss_contribution
     video_resolution = (224, 224)
+    # Rebalancing config (used by train_rebalanced.py)
+    rebalance_strategy = 'oversample'  # 'none', 'oversample', 'smote_hybrid'
+    target_viral_ratio = 0.3
+    val_start_month = '2025-01'
+    test_start_month = '2025-04'
     required_dims = [
         'author_follower_count',
         'author_following_count',
