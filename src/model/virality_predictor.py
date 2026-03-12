@@ -3,6 +3,7 @@ import torch.nn as nn
 
 from transformers import AutoModel
 
+from src.model.focal_loss import FocalLossWithLogits
 from src.config import Config
 
 
@@ -51,10 +52,8 @@ class ViralityPredictor(nn.Module):
             nn.Linear(self.config.d_model // 2, 1)
         )
         self.regression_loss = nn.HuberLoss(reduction='none')
-        self.register_buffer("pos_weight", torch.tensor(
-            [config.viral_loss_weight]))
-        self.classification_loss = nn.BCEWithLogitsLoss(
-            pos_weight=self.pos_weight)
+        self.classification_loss = FocalLossWithLogits(alpha=self.config.focal_alpha,
+                                                       gamma=self.config.focal_gamma)
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
                 pixel_values: torch.Tensor, tabular_features: torch.Tensor,

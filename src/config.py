@@ -1,11 +1,14 @@
 class Config:
+    lr_scheduler_type = "cosine"
+    warmup_ratio = 0.1
+    weight_decay = 0.01
     seed = 42
-    epochs = 15
-    batch_size = 32
+    epochs = 10
+    batch_size = 64
     gradient_accumulation_steps = 4
     max_grad_norm = 1.0
     d_model = 512
-    train_size = 0.5
+    train_size = 0.9
     test_size = 0.1
     dropout = 0.3
     num_tabular_features: int = 19
@@ -14,8 +17,8 @@ class Config:
     object_detection_model_id = 'facebook/detr-resnet-50'
     max_text_len = 256
     num_frames = 16
-    checkpoint_path = "data/checkpoints"
-    num_workers = 4
+    checkpoint_path = "data/checkpoints/experiments/focal_loss"
+    num_workers = 14
     base_dataset_id = 'The-data-company/TikTok-10M'
     dataset_id = 'rodmosc/viral'
     data_path = 'data/videos'
@@ -27,10 +30,8 @@ class Config:
     }
     p_virality_threshold = 0.95
     confidence_threshold = 0.5
-    # Viral examples are upweighted by this factor to counter class
-    # imbalance during training.
-    viral_loss_weight = int(p_virality_threshold /
-                            (1 - p_virality_threshold) * 1.2)
+    focal_alpha = p_virality_threshold - 0.15
+    focal_gamma = 2.0
     regression_loss_contribution = 0.3
     classification_loss_contribution = 1 - regression_loss_contribution
     video_resolution = (224, 224)
