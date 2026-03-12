@@ -4,7 +4,7 @@ class Config:
     weight_decay = 0.01
     seed = 42
     epochs = 10
-    batch_size = 64
+    batch_size = 32
     gradient_accumulation_steps = 4
     max_grad_norm = 1.0
     d_model = 512
