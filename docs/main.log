@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.3.8)  12 MAR 2026 18:36
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.3.8)  12 MAR 2026 20:31
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -560,8 +560,8 @@ File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Live
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
 
-Underfull \hbox (badness 4995) in paragraph at lines 77--77
-[]|\OT1/cmr/m/n/10 Follower, heart, video, and
+Underfull \hbox (badness 2837) in paragraph at lines 77--77
+[]|\OT1/cmr/m/n/10 Follower, hearts, video, and
  []
 
 
@@ -570,7 +570,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 96--96
  []
 
 
-Underfull \hbox (badness 5490) in paragraph at lines 96--96
+Underfull \hbox (badness 4479) in paragraph at lines 96--96
 []|\OT1/cmr/m/n/10 Scraped video re-sized to
  []
 
@@ -581,27 +581,40 @@ Underfull \hbox (badness 5490) in paragraph at lines 96--96
 {/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map}]
 
 [2]
+<assets/play_count_by_account_size_raw.png, id=30, 578.16pt x 361.35pt>
+File: assets/play_count_by_account_size_raw.png Graphic file (type png)
+<use assets/play_count_by_account_size_raw.png>
+Package pdftex.def Info: assets/play_count_by_account_size_raw.png  used on input line 169.
+(pdftex.def)             Requested size: 217.42265pt x 135.88637pt.
+<assets/play_count_by_delta_hours_normalized.png, id=32, 578.16pt x 361.35pt>
+File: assets/play_count_by_delta_hours_normalized.png Graphic file (type png)
+<use assets/play_count_by_delta_hours_normalized.png>
+Package pdftex.def Info: assets/play_count_by_delta_hours_normalized.png  used on input line 198.
+(pdftex.def)             Requested size: 217.42265pt x 135.88637pt.
 
-[3]
 
-[4]
+[3 <./assets/play_count_by_account_size_raw.png>]
+
+[4 <./assets/play_count_by_delta_hours_normalized.png>]
 
 [5{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc}]
-<assets/loss.png, id=69, 1293.633pt x 715.473pt>
+<assets/loss.png, id=77, 1293.633pt x 715.473pt>
 File: assets/loss.png Graphic file (type png)
 <use assets/loss.png>
-Package pdftex.def Info: assets/loss.png  used on input line 417.
+Package pdftex.def Info: assets/loss.png  used on input line 441.
 (pdftex.def)             Requested size: 217.42265pt x 120.24231pt.
-<assets/focal_loss.png, id=71, 1293.633pt x 715.473pt>
+<assets/focal_loss.png, id=78, 1293.633pt x 715.473pt>
 File: assets/focal_loss.png Graphic file (type png)
 <use assets/focal_loss.png>
-Package pdftex.def Info: assets/focal_loss.png  used on input line 423.
+Package pdftex.def Info: assets/focal_loss.png  used on input line 447.
 (pdftex.def)             Requested size: 217.42265pt x 120.24231pt.
 
 
-[6 <./assets/loss.png> <./assets/focal_loss.png>]
+[6]
 
-[7] (./main.aux)
+[7 <./assets/loss.png> <./assets/focal_loss.png>]
+
+[8] (./main.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
@@ -610,18 +623,18 @@ Package rerunfilecheck Info: File `main.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 21398 strings out of 473190
- 405062 string characters out of 5715801
- 807965 words of memory out of 5000000
- 44280 multiletter control sequences out of 15000+600000
+ 21417 strings out of 473190
+ 405819 string characters out of 5715801
+ 807411 words of memory out of 5000000
+ 44294 multiletter control sequences out of 15000+600000
  566523 words of font info for 63 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  102i,16n,107p,465b,881s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/cm-super/sfrm1095.pfb>
-Output written on main.pdf (7 pages, 449132 bytes).
+Output written on main.pdf (8 pages, 538117 bytes).
 PDF statistics:
- 172 PDF objects out of 1000 (max. 8388607)
- 125 compressed objects within 2 object streams
- 38 named destinations out of 1000 (max. 500000)
- 23 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 187 PDF objects out of 1000 (max. 8388607)
+ 135 compressed objects within 2 object streams
+ 43 named destinations out of 1000 (max. 500000)
+ 33 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1773365772.01508 "/Users/oscar/Desktop/Projects/cs229/viral/docs/main.tex" "main.pdf" "main" 1773365772.78213 0
-  "/Users/oscar/Desktop/Projects/cs229/viral/docs/main.tex" 1773365772.0695 22801 78b0c5619d54adfaaa69f3363f7479c9 ""
+["pdflatex"] 1773372709.30445 "/Users/oscar/Desktop/Projects/cs229/viral/docs/main.tex" "main.pdf" "main" 1773372710.13251 0
+  "/Users/oscar/Desktop/Projects/cs229/viral/docs/main.tex" 1773372709.12758 23668 74fcefc844ef1a7ba64fa59163da2a21 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/tcrm1095.tfm" 1136768653 1536 02c06700a42be0f5a28664c7273f82e7 ""
@@ -166,9 +166,11 @@
   "/usr/local/texlive/2025/texmf.cnf" 1741450484 577 418a7058ec8e006d8704f60ecd22c938 ""
   "assets/focal_loss.png" 1773364653.96696 137195 28f57baa31cc37c75196364d1f189a0f ""
   "assets/loss.png" 1773275966.81031 170989 a2eb17cca7bfc1cdb638345c7dca76ae ""
-  "main.aux" 1773365772.73024 1067 5672fa3e2e33f82d06d9a56557c4e130 "pdflatex"
-  "main.out" 1773365772.31836 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
-  "main.tex" 1773365772.0695 22801 78b0c5619d54adfaaa69f3363f7479c9 ""
+  "assets/play_count_by_account_size_raw.png" 1773364488.00539 50994 54885d4471a178230427a631803908e4 ""
+  "assets/play_count_by_delta_hours_normalized.png" 1773364488.00714 65405 8f7afdc22bbb03e3a63bed7189f5de99 ""
+  "main.aux" 1773372710.08072 1714 ad1017e7ed160bb8e700fd7c2f5723e2 "pdflatex"
+  "main.out" 1773372709.59072 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "main.tex" 1773372709.12758 23668 74fcefc844ef1a7ba64fa59163da2a21 ""
   (generated)
   "main.aux"
   "main.log"

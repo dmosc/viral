@@ -71,7 +71,7 @@ signals we deemed relevant to the problem.
     city & String & City where the video was posted from & Base dataset \\
     user\_verified & Boolean & Verification status of the author & Scraped (TikTok web profile) \\
     is\_private & Boolean & Whether the account is set to private & Scraped (TikTok web profile) \\
-    author\_stats & Float & Follower, heart, video, and friend counts & Scraped; $\log(1+x)$ scaled \\
+    author\_stats & Floats & Follower, hearts, video, and friend counts & Scraped; $\log(1+x)$ scaled \\
     account\_create\_time & Timestamp & When the user account was first created & Scraped (unix epoch) \\
     \hline
 \end{tabularx}
@@ -91,7 +91,7 @@ signals we deemed relevant to the problem.
     duration & Integer & Total length of the video in seconds & Base dataset \\
     challenges & String & Associated hashtag challenges or trends & Base dataset \\
     video\_bytes & Binary & Scraped video resized to 256x256 @ 1fps & \texttt{yt-dlp} + \texttt{moviepy} \\
-    detected\_objects & String & Objects detected in video & pretrained facebook/detr-resnet-50 \\
+    detected\_objects & String & Objects detected in video & Pretrained facebook/detr-resnet-50 \\
     \hline
 \end{tabularx}
 \end{table}
@@ -116,7 +116,7 @@ signals we deemed relevant to the problem.
     \hline
     \multicolumn{4}{|l|}{\textbf{Technical / video specs}} \\
     \hline
-    resolution & Integer & Video width and height in pixels & \texttt{yt-dlp} (Best format) \\
+    resolution & Integer & Video width and height in pixels & \texttt{yt-dlp} \\
     aspect\_ratio & Float32 & Ratio of width to height & Calculated from payload \\
     filesize & Integer & Total storage size of the video file & \texttt{yt-dlp} payload metadata \\
     codecs & String & Video (vcodec) and audio (acodec) formats & \texttt{yt-dlp} payload metadata \\
@@ -132,10 +132,9 @@ signals we deemed relevant to the problem.
     \hline
     \multicolumn{4}{|l|}{\textbf{Engagement stats \& target labels}} \\
     \hline
-    interaction\_counts & Integer & Plays, likes, comments, shares, and saves & Scraped + base dataset \\
-    engagement\_score & Float64 & Weighted sum of interactions per view & Engineered; Weighted calculation \\
+    engagement\_score & Float64 & Weighted sum of interactions per view & Engineered; weighted calculation \\
     view\_velocity & Float64 & Views accumulated per hour since creation & Engineered; $\log(1+x)$ scaled \\
-    is\_viral & Binary & Classification ($P=0.95$) of engagement & Engineered (Quantile threshold) \\
+    is\_viral & Binary & Classification ($P=0.95$) of engagement & Engineered; (quantile threshold) \\
     \hline
 \end{tabularx}
 \end{table}
@@ -148,20 +147,31 @@ stack-ranked in absolute terms with the goal of producing a signal that's useful
 for any account size.
 
 In order to recreate a mixed signal that fits the previous definition, we
-compute two scores for each video, \textbf{Engagement} and \textbf{View
-Velocity}.
+compute two scores for each video, \textbf{engagement} and \textbf{view
+velocity}.
+
+\subsubsection*{Engagement}
 
 \begin{align}
-    \text{Engagement}_i &= \frac{\text{share\_count} \times w_0 + \text{save\_count} \times w_1 + \text{comment\_count} \times w_2 + \text{like\_count} \times w_3}{\text{play\_count}} \\
+    \text{engagement}_i &= \frac{\text{share\_count} \times w_0 + \text{save\_count} \times w_1 + \text{comment\_count} \times w_2 + \text{like\_count} \times w_3}{\text{play\_count}}
 \end{align}
 
-Where $Engagement$ is meant to represent a volume of "interactions" a video had
+Where $engagement$ is meant to represent a volume of "interactions" a video had
 relative to its play count, making the score relative to the account size. As
 shown in the following graph, its expected to assume that accounts with a larger
 audience will most likely outperform its counterparts, making these videos seem
 more "viral" in absolute measurements.
 
-% TODO: Insert graph showing distribution of play count binned by account size.
+\begin{figure}[ht]
+    \centering
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{assets/play_count_by_account_size_raw.png}
+        \caption{As the account size increases, the play count increases. We're
+        interested in somehow normalizing this to produce a signal that fairly
+        compares "virality" irrespective of account size.}
+    \end{minipage}
+\end{figure}
 
 What this signal is meant to capture instead is a degree of "engagement" that's
 normalized to the audience size of any given account. To convey the idea, a
@@ -170,22 +180,37 @@ thousands of interactions would have a comparable engagement to an acconut with
 millions of followers that accumulated hundredths of thousands of interactions
 instead.
 
+\subsubsection*{View velocity}
+
 \begin{align}
-    \text{View Velocity}_i &= \frac{\text{play\_count}}{\text{delta\_hours}}
+    \text{view velocity}_i &= \frac{\text{play\_count}}{\text{delta\_hours}}
 \end{align}
 
-Where \textbf{View Velocity} normalizes the value of $play\_count$ by the total
-amount of time a video has been live collecting interactions. A video with a
-high "view velocity" is collecting interactions "faster" relative to the rest.
 
-% TODO: Insert graph showing distribution of play count binned by delta hours.
+\textbf{View velocity} normalizes the value of $play\_count$ by the total amount
+of time a video has been live collecting interactions. A video with a high
+"view velocity" is collecting interactions "faster" relative to the rest.
+
+\begin{figure}[ht]
+    \centering
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{assets/play_count_by_delta_hours_normalized.png}
+        \caption{The ratio of plays to delta\_hours shows the natural time-decay
+        bias in raw play\_count. A video with 100k views in 1 hour would look
+        worse than a video with 100k + 1 views over 1 month. Normalizing by
+        delta\_hours "levels the playing field".}
+    \end{minipage}
+\end{figure}
+
+\subsubsection*{Producing the signal}
 
 We add together both measurements to produce a signal $S_i$ for each video that
 we use to stack-rank them in absolute $S_i$ terms and consider the top $5\%$ as
 "viral":
 
 \begin{align}
-    S_i &= \frac{\text{Engagement}_i}{\text{Engagement}_{max}} + \frac{\text{View Velocity}_i}{\text{View Velocity}_{max}} \\
+    S_i &= \frac{\text{engagement}_i}{\text{engagement}_{max}} + \frac{\text{view velocity}_i}{\text{view velocity}_{max}} \\
     y_{\text{is\_viral}}^{(i)} &= 
     \begin{cases} 
       1 & \text{if } S_i \geq F_S^{-1} (0.95) \\
@@ -341,59 +366,59 @@ $d\_model$ to reduce dimensionality while increasing specialization:
 
 We experimented with two types loss targets.
 
-\subsubsection*{Weighted loss target}
+\subsubsection*{Weighted Binary Cross-Entropy loss (BCE)}
 
 This loss target is a composite of the different upstream heads, weighted to
 prioritize the primary classification task while using the regression heads as
 auxiliary signals:
 
 \begin{itemize}
-    \item Loss composition: We use Huber loss for the regression targets to
-    remain robust against the extreme outliers common in viral distributions,
-    and weighted BCE for the classification target.
-    \item Weighting strategy: We set $\lambda_{cls}=0.7$ and
-    $\lambda_{reg}=0.3$. This heavy weighting on classification ensures the
-    model focuses on detecting the rare viral events (upweighted by a factor of
+    \item We use \href{https://arxiv.org/pdf/2108.12627}{Huber loss} for the
+    regression targets to remain robust against the extreme outliers common in
+    viral distributions, and a weighted BCE for the classification target.
+    \item We set $\lambda_{cls}=0.7$ and $\lambda_{reg}=0.3$. This heavy
+    weighting on classification ensures the model focuses on detecting the rare
+    viral events (which are themselves upweighted by a factor of
     $virality\_threshold / (1 - virality\_threshold)$ in the BCE loss), while
-    the regression task provides a continuous "popularity" signal that
-    stabilizes the shared latent space.
+    the regression tasks provide continuous "engagement" and "view velocity"
+    measurements to complement the final signal.
 \end{itemize}
 
 \subsubsection*{Focal loss}
 
-This loss target replaces the standard weighted BCE with an adaptive weighting
-mechanism designed to prioritize high-error samples over well-classified "easy" 
-examples:
+This loss target -- introduced in
+\href{https://arxiv.org/abs/1708.02002}{"Focal Loss for Dense Object Detection"} --
+replaces the standard weighted BCE with an adaptive weighting mechanism designed
+to prioritize high-error samples over well-classified "easy" examples (i.e. the
+over-populated negative class). Focal loss can be. modulated with a "focus
+parameter" $\gamma$ and a "balance factor" $\alpha$.
 
 \begin{itemize}
-    \item Loss composition: We implement Focal Loss by modulating the 
-    classification error with a focusing parameter $\gamma$ and a balancing
-    factor $\alpha$.
-    \item Weighting strategy: We set $\gamma=2.0$ to aggressively down-weight 
-    the loss contributed by easy negatives, and $\alpha=p\_virality\_threshold$ 
-    to account for the extreme class imbalance. By scaling the loss by 
-    $(1 - p_t)^\gamma$, the model is forced to concentrate its gradients on 
-    the "hard" minority class (viral videos) and ambiguous samples that fall 
-    near the decision boundary.
+    \item We set $\gamma=2.0$ to aggressively down-weight the loss contributed
+    by the abundant negatives, to allow the model to focus on the hard
+    negatives.
+    \item And $\alpha=p\_virality\_threshold$ to account for the extreme class
+    imbalance to have the model re-weight both classes.
 \end{itemize}
 
 \section*{Experiments and results}
 
-To evaluate the performance of our multimodal approach, we track a suite of
+To evaluate the performance of our multi-modal approach, we track a suite of
 metrics that address both the regression of engagement signals and the
 classification of rare viral events. Given the high degree of class imbalance in
-our dataset (where viral videos constitute only the top 5\% of the
-distribution), we prioritize metrics that are robust to sparsity.
+our dataset and the nature of the problem we're solving for, we prefer to
+prioritize \textbf{recall}, and recall-associated metrics.
 
 \begin{itemize}
-    \item \textbf{Precision-Recall AUC (PR-AUC):} Our primary metric for the
-    classification head. Unlike ROC-AUC, PR-AUC does not reward the model for
-    correctly predicting the "non-viral" majority, providing a more honest view
-    of the model's ability to identify viral content.
+    \item \textbf{Receiver Operating Characteristic - Area Under the Curve
+    (ROC-AUC):} Used to measure the general separability of the classes across
+    all potential thresholds.
+    \item \textbf{Precision-Recall Area Under the Curve (PR-AUC):} Our primary
+    metric for the classification head. Unlike ROC-AUC, PR-AUC does not reward
+    the model for correctly predicting the "non-viral" majority, providing a
+    more honest view of the model's ability to identify viral content.
     \item \textbf{F1-Score:} Calculated at the 0.5 threshold to measure the
     harmonic mean of precision and recall.
-    \item \textbf{ROC-AUC:} Used to measure the general separability of the
-    classes across all potential thresholds.
 \end{itemize}
 
 \subsection*{Training Dynamics}
@@ -401,27 +426,26 @@ distribution), we prioritize metrics that are robust to sparsity.
 We compared two distinct training regimes: a multi-task \textbf{weighted loss} 
 baseline and a specialized \textbf{focal loss} run. The baseline utilized a 
 linear learning rate decay over 15 epochs, while the focal loss experiment 
-employed a cosine scheduler with a 10\% warmup phase to stabilize the 
-initial gradients given the aggressive $\gamma=2.0$ parameter.
+used a cosine scheduler with a 10\% warmup phase to stabilize the initial
+gradients given the aggressive $\gamma=2.0$ parameter.
 
 As shown in figure 1 and figure 2, both models exhibited steady convergence. 
 The focal loss model reached its optimal performance earlier, around epoch 8, 
-suggesting that the modulating factor $(1 - p_t)^\gamma$ allowed the model 
-to ignore easy negatives and converge faster on the decision boundary for 
-viral samples.
+suggesting that this loss type allowed the model  to ignore easy negatives and
+converge faster on the decision boundary for viral samples.
 
 \begin{figure}[ht]
     \centering
     \begin{minipage}{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{assets/loss.png}
-        \caption{Weighted Loss training dynamics.}
+        \caption{Weighted loss training dynamics.}
     \end{minipage}
     \hfill
     \begin{minipage}{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{assets/focal_loss.png}
-        \caption{Focal Loss training dynamics.}
+        \caption{Focal loss training dynamics.}
     \end{minipage}
 \end{figure}
 
@@ -443,23 +467,24 @@ viral samples.
 \end{table}
 
 The transition to focal loss yielded a significant \textbf{14.7\% improvement 
-in precision}. While the baseline Weighted loss model achieved higher recall by
-aggressively upweighting the minority class, it suffered from a high
+in precision}. While the baseline weighted BCE loss model achieved higher recall
+by aggressively upweighting the minority class, it suffered from a high
 false-positive rate. Focal loss mitigated this by forcing the model to 
 focus on "hard" examples, resulting in a more balanced F1-score of 0.2575.
 
-Despite the marginal gains in ROC-AUC, the stagnancy of the PR-AUC at 0.1805 
-across both experiments confirms that while we can tune the precision-recall 
-trade-off, the absolute confidence in viral classification is capped by:
+Despite the marginal improvement in ROC-AUC, the stagnancy of the PR-AUC at
+0.1805 across both experiments confirms that while we can tune the
+precision-recall trade-off, the absolute confidence in viral classification is
+likely bounded by factors we didn't model:
 
 \begin{enumerate}
-    \item \textbf{Intrinsic stochasticity:} Virality on TikTok is often driven
-    by external algorithmic amplification or "luck" (the cold-start problem)
-    that cannot be fully captured by content features alone.
-    \item \textbf{Information asymmetry:} Despite multimodal fusion, the frozen
-    encoders (DistilBERT and VideoMAE) may be missing platform-specific nuances
-    like trending audio or specific visual tropes that significantly impact
-    short-form video success.
+    \item \textbf{Unmeasurable stochasticity:} Like we suggested earlier, there
+    are simply too many ongoing dynamics that influence the popularity of a
+    video (e.g. socio-political discourse, randomness, etc.) that we couldn't
+    realistically capture in a finite dataset.
+    \item \textbf{Gaps in dataset:} We might still be missing additional
+    input sources like audio, video dynamics, or platform-specific nuances (e.g.
+    current trends, etc.) that significantly influence a video's success.
 \end{enumerate}
 
 \section*{Next steps}

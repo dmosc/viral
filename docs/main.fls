@@ -266,6 +266,16 @@ INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/cm/cmmi10.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/cm/cmsy10.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/cm/cmex10.tfm
 INPUT /usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map
+INPUT ./assets/play_count_by_account_size_raw.png
+INPUT ./assets/play_count_by_account_size_raw.png
+INPUT ./assets/play_count_by_account_size_raw.png
+INPUT ./assets/play_count_by_account_size_raw.png
+INPUT ./assets/play_count_by_account_size_raw.png
+INPUT ./assets/play_count_by_delta_hours_normalized.png
+INPUT ./assets/play_count_by_delta_hours_normalized.png
+INPUT ./assets/play_count_by_delta_hours_normalized.png
+INPUT ./assets/play_count_by_delta_hours_normalized.png
+INPUT ./assets/play_count_by_delta_hours_normalized.png
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/tcrm1095.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc
 INPUT ./assets/loss.png
