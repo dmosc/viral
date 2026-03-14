@@ -4,6 +4,8 @@
 
 The following are relevant assets produced by this ML project:
 
+* Paper: https://github.com/dmosc/viral/blob/main/docs/main.pdf
+* Repo: https://github.com/dmosc/viral
 * Training dataset: https://huggingface.co/datasets/rodmosc/viral
 * Model trained with weighted BCE loss: https://huggingface.co/rodmosc/viral-weighted-loss
 * Model trained with focal loss: https://huggingface.co/rodmosc/viral-focal-loss
@@ -40,6 +42,3 @@ scraper to Huggingface:
 ```bash
 python -m src.scripts.compose_dataset
 ```
-
-Project details can be found
-[here](https://github.com/dmosc/viral/blob/main/docs/main.pdf).
