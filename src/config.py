@@ -30,8 +30,8 @@ class Config:
     }
     p_virality_threshold = 0.95
     confidence_threshold = 0.5
-    focal_alpha = p_virality_threshold - 0.15
-    focal_gamma = 2.0
+    focal_alpha = p_virality_threshold
+    focal_gamma = 3.0
     regression_loss_contribution = 0.3
     classification_loss_contribution = 1 - regression_loss_contribution
     video_resolution = (224, 224)
