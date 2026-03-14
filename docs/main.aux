@@ -2,11 +2,63 @@
 \providecommand\hyper@newdestlabel[2]{}
 \providecommand\HyField@AuxAddToFields[1]{}
 \providecommand\HyField@AuxAddToCoFields[2]{}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces As the account size increases, the play count increases. We're interested in somehow normalizing this to produce a signal that fairly compares "virality" irrespective of account size.}}{3}{figure.1}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces The ratio of plays to delta\_hours shows the natural time-decay bias in raw play\_count. A video with 100k views in 1 hour would look worse than a video with 100k + 1 views over 1 month. Normalizing by delta\_hours "levels the playing field".}}{4}{figure.2}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces End-to-end architecture: features are extracted from multimodal inputs, fused into a shared latent space, and passed to specialized heads. The final objective is a weighted combination of Huber regression loss and weighted binary cross-entropy (BCE) loss.}}{5}{figure.3}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Weighted loss training dynamics.}}{7}{figure.4}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Focal loss training dynamics.}}{7}{figure.5}\protected@file@percent }
-\newlabel{table:results_comparison}{{}{7}{Analysis of results}{section*.20}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Comparative performance between weighted BCE and focal loss targets.}}{7}{table.1}\protected@file@percent }
-\gdef \@abspage@last{8}
+\citation{tiktok10m}
+\citation{viral_dataset}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\newlabel{sec:intro}{{1}{1}{Introduction}{section.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Methods}{1}{section.2}\protected@file@percent }
+\newlabel{sec:methods}{{2}{1}{Methods}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Data collection and processing}{1}{subsection.2.1}\protected@file@percent }
+\newlabel{sec:data}{{2.1}{1}{Data collection and processing}{subsection.2.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Task definition}{1}{subsection.2.2}\protected@file@percent }
+\newlabel{sec:task}{{2.2}{1}{Task definition}{subsection.2.2}{}}
+\newlabel{eq:engagement}{{1}{1}{Task definition}{equation.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Dataset dimensions: intrinsic content signals and extrinsic author/metadata signals.}}{2}{table.1}\protected@file@percent }
+\newlabel{tab:dataset}{{1}{2}{Dataset dimensions: intrinsic content signals and extrinsic author/metadata signals}{table.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Raw play count by account size. Larger accounts naturally accumulate more views, motivating our normalized engagement signal.}}{2}{figure.1}\protected@file@percent }
+\newlabel{fig:play_count}{{1}{2}{Raw play count by account size. Larger accounts naturally accumulate more views, motivating our normalized engagement signal}{figure.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces View velocity by exposure time. Videos accumulate views most rapidly in the first few hours, with velocity dropping sharply thereafter.}}{2}{figure.2}\protected@file@percent }
+\newlabel{fig:view_velocity}{{2}{2}{View velocity by exposure time. Videos accumulate views most rapidly in the first few hours, with velocity dropping sharply thereafter}{figure.2}{}}
+\newlabel{eq:velocity}{{2}{2}{}{equation.2}{}}
+\citation{sanh2019distilbert}
+\citation{tong2022videomae}
+\citation{huber1992robust}
+\citation{lin2017focal}
+\newlabel{eq:signal}{{3}{3}{}{equation.3}{}}
+\newlabel{eq:viral}{{4}{3}{}{equation.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Model architecture}{3}{subsection.2.3}\protected@file@percent }
+\newlabel{sec:architecture}{{2.3}{3}{Model architecture}{subsection.2.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces End-to-end architecture: features are extracted from multimodal inputs, fused into a shared latent space, and passed to specialized heads. The final objective is a weighted combination of Huber regression loss and classification loss.}}{3}{figure.3}\protected@file@percent }
+\newlabel{fig:architecture}{{3}{3}{End-to-end architecture: features are extracted from multimodal inputs, fused into a shared latent space, and passed to specialized heads. The final objective is a weighted combination of Huber regression loss and classification loss}{figure.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Text input}{3}{figure.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Video input}{3}{figure.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Loss targets}{3}{figure.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Experiments and Results}{4}{section.3}\protected@file@percent }
+\newlabel{sec:experiments}{{3}{4}{Experiments and Results}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Training dynamics}{4}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:training}{{3.1}{4}{Training dynamics}{subsection.3.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Training dynamics for weighted loss (left) and focal loss (right).}}{4}{figure.4}\protected@file@percent }
+\newlabel{fig:training}{{4}{4}{Training dynamics for weighted loss (left) and focal loss (right)}{figure.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Analysis of results}{4}{subsection.3.2}\protected@file@percent }
+\newlabel{sec:results}{{3.2}{4}{Analysis of results}{subsection.3.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Comparative performance between weighted BCE and focal loss targets.}}{4}{table.2}\protected@file@percent }
+\newlabel{tab:results}{{2}{4}{Comparative performance between weighted BCE and focal loss targets}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Feature importance}{4}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:feature_importance}{{3.3}{4}{Feature importance}{subsection.3.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Permutation importance via classification head (left) and regression heads (right).}}{5}{figure.5}\protected@file@percent }
+\newlabel{fig:permutation}{{5}{5}{Permutation importance via classification head (left) and regression heads (right)}{figure.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Ablation studies}{5}{subsection.3.4}\protected@file@percent }
+\newlabel{sec:ablation}{{3.4}{5}{Ablation studies}{subsection.3.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Ablation study: metrics when each modality is individually zeroed. Removing tabular features causes the most severe degradation (F1 drops to 0).}}{5}{figure.6}\protected@file@percent }
+\newlabel{fig:ablation}{{6}{5}{Ablation study: metrics when each modality is individually zeroed. Removing tabular features causes the most severe degradation (F1 drops to 0)}{figure.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Conclusion and Future Work}{5}{section.4}\protected@file@percent }
+\newlabel{sec:conclusion}{{4}{5}{Conclusion and Future Work}{section.4}{}}
+\bibstyle{acl_natbib}
+\bibdata{references}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Appendix}{7}{appendix.A}\protected@file@percent }
+\newlabel{sec:appendix}{{A}{7}{Appendix}{appendix.A}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Inference examples}{7}{subsection.A.1}\protected@file@percent }
+\newlabel{sec:inference}{{A.1}{7}{Inference examples}{subsection.A.1}{}}
+\newlabel{fig:inference}{{A.1}{7}{Inference examples}{subsection.A.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Inference examples showing model strengths (true positives/negatives, green) and shortcomings (false positives/negatives, red).}}{7}{figure.7}\protected@file@percent }
+\gdef \@abspage@last{7}

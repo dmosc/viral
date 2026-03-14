@@ -1,517 +1,470 @@
-% !TEX root = root.tex
-\documentclass[11pt, a4paper]{article} % Removed twocolumn
-\usepackage[colorlinks=true, urlcolor=blue, linkcolor=red]{hyperref}
-\usepackage{tabularx}
+\documentclass{article}
+
+\usepackage[final]{neurips_2019}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[colorlinks=true, urlcolor=blue, linkcolor=red, citecolor=blue]{hyperref}
+\usepackage{url}
 \usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tabularx}
 \usepackage{amsmath}
+\usepackage{float}        % for [H] figure placement
+\usepackage{enumitem} 
 \usepackage{tikz}
-\usepackage[margin=1in]{geometry}
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc}
 
-\title{Predicting the likelihood of a TikTok video going viral using intrinsic and extrinsic signals}
-\author{Oscar Rodriguez, Mahda Soltani, Ela Naz Sigin}
-\date{March 10, 2026}
+% for subsection spacing
+\usepackage{titlesec}
+\titlespacing*{\section}{0pt}{-1pt}{-1pt}
+\titlespacing*{\subsection}{0pt}{-3pt}{-1pt}
+\titlespacing*{\subsubsection}{0pt}{-2pt}{-1pt}
+
+% for figures spacing
+\setlength{\textfloatsep}{6pt}
+\setlength{\floatsep}{6pt}
+\setlength{\intextsep}{6pt}
+
+% for equations spacing
+\setlength{\abovedisplayskip}{4pt}
+\setlength{\belowdisplayskip}{4pt}
+\setlength{\abovedisplayshortskip}{2pt}
+\setlength{\belowdisplayshortskip}{2pt}
+
+% for bullets list spacing
+\usepackage{enumitem}
+\setlist[itemize]{
+    noitemsep,
+    topsep=0pt,
+    partopsep=0pt,
+    parsep=0pt
+}
+
+\setlist[enumerate]{
+    noitemsep,
+    topsep=0pt,
+    partopsep=0pt,
+    parsep=0pt
+}
+\raggedbottom
+
+\title{
+  Predicting TikTok Virality with Late-Fusion Multimodal Learning \\
+  \vspace{1em}
+  \small{\normalfont Stanford CS229 Project}
+}
+
+\author{
+  Oscar Rodriguez \\
+  Stanford University \\
+  \texttt{oscarrm@stanford.edu} \\
+  \And
+  Mahda Soltani \\
+  Stanford University \\
+  \texttt{soltanim@stanford.edu} \\
+  \And
+  Ela Naz Sigin \\
+  Stanford University \\
+  \texttt{elasigin@stanford.edu}
+}
 
 \begin{document}
 
 \maketitle
+\vspace{-19pt}
 
 \begin{abstract}
-    Social media platforms, like TikTok have become one of the dominant
-    channels through which information, entertainment, and political and
-    cultural trends propagate at scale. A defining feature of these
-    platforms is the extreme skewness in attention: while the vast majority
-    of uploaded videos receive little to no exposure, a small fraction
-    achieve \textit{viral} reach, accumulating orders of magnitude more
-    views within a short time window. This heavy-tailed distribution of
-    engagement naturally raises the question of how to operationalize and
-    predict “virality” in a principled way.
+\vspace{-10pt}
+Social media platforms like TikTok have become one of the dominant channels
+through which information, entertainment, and political and cultural trends
+propagate at scale. A defining feature of these platforms is the extreme
+skewness in attention: while the vast majority of uploaded videos receive little
+to no exposure, a small fraction achieve \textit{viral} reach, accumulating
+orders of magnitude more views within a short time window. This heavy-tailed
+distribution of engagement naturally raises the question of how to
+operationalize and predict ``virality'' in a principled way.
 
-    This investigation explores the use of Machine Learning techniques to
-    pin down a formal framework for the task of predicting the likelihood of
-    a TikTok video going viral using both intrinsic (e.g. video content) and
-    extrinsic features (e.g. video author).
+This investigation explores the use of Machine Learning techniques to pin down a
+formal framework for the task of predicting the likelihood of a TikTok video
+going viral using both intrinsic (e.g.\ video content) and extrinsic features
+(e.g.\ video author).
 \end{abstract}
+\vspace{-11pt}
+% =============================================================================
+\section{Introduction}
+\label{sec:intro}
+Social media platforms such as TikTok have become central channels through which information, entertainment, and cultural trends spread at massive scale. A defining feature of these platforms is the extreme inequality in attention: while most uploaded videos receive minimal engagement, a small fraction rapidly accumulates millions of views. This highly skewed distribution raises an important question: can we predict which content is likely to go viral?
 
-\section*{Introduction}
-\dots
+In this project, we develop a machine learning framework to estimate the probability that a TikTok video becomes viral by leveraging both intrinsic signals (features derived from the video content itself) and extrinsic signals (information about the creator and posting context). Using a multimodal architecture that integrates text, video, and tabular metadata, we model engagement dynamics and classify videos that fall into the top tail of the engagement distribution.
 
-\section*{Methods}
+Our results provide insight into the extent to which measurable platform signals can explain virality, while highlighting the persistent role of stochastic and external factors in shaping online attention.
+% =============================================================================
+\section{Methods}
+\label{sec:methods}
 
-This section goes over the different aspects of the Machine Learning pipeline
-that we crafted for the given task, starting from data processing all the way
-to the model architecture and reasoning behind each of the decisions.
+\subsection{Data collection and processing}
+\label{sec:data}
 
-\subsection*{Data collection and processing}
+We started with a base dataset called TikTok-10M~\cite{tiktok10m} from which we sourced a rich subset of examples that we complemented with a scraping step to download the videos and publisher accounts to extract additional signals (e.g.\ video bytes, aspect ratio) as well as account information (e.g.\ account statistics, publishing history). With all this raw data at hand, we produced a curated dataset~\cite{viral_dataset} for our task. Table~\ref{tab:dataset} documents the dataset dimensions.
 
-We started off with a base dataset called
-\href{https://huggingface.co/datasets/The-data-company/TikTok-10M}{TikTok-10M}
-from which we sourced a rich subset of examples that we complemented with a
-scraping step to download the videos and publisher accounts to extract
-additional signals (e.g. video bytes, aspect ratio, etc.) as well
-as account information (e.g. account statistics, publishing history, etc.).
-
-With all this raw data at hand, we produced a
-\href{https://huggingface.co/datasets/rodmosc/viral}{curated dataset} for
-our task. The following tables contain a detailed documentation of dataset
-dimensions, encompassing intrinsic content signals and extrinsic author/metadata
-signals we deemed relevant to the problem.
-
-\begin{table}
+\begin{table}[h]
+\caption{Dataset dimensions: intrinsic content signals and extrinsic author/metadata signals.}
+\label{tab:dataset}
 \centering
 \small
-\begin{tabularx}{\textwidth}{|l l X l|}
-    \hline
-    \textbf{Dimension} & \textbf{Type} & \textbf{Description} & \textbf{Extraction / Treatment} \\
-    \hline
-    \multicolumn{4}{|l|}{\textbf{User / author signals}} \\
-    \hline
-    user\_id/username & ID/String & Unique identifier and handle of the creator & Scraped (TikTok web profile) \\
-    user\_language & String & Configuration language of the account & Base dataset \\
-    city & String & City where the video was posted from & Base dataset \\
-    user\_verified & Boolean & Verification status of the author & Scraped (TikTok web profile) \\
-    is\_private & Boolean & Whether the account is set to private & Scraped (TikTok web profile) \\
-    author\_stats & Floats & Follower, hearts, video, and friend counts & Scraped; $\log(1+x)$ scaled \\
-    account\_create\_time & Timestamp & When the user account was first created & Scraped (unix epoch) \\
-    \hline
+\begin{tabularx}{\textwidth}{@{}l l X l@{}}
+\toprule
+\textbf{Dimension} & \textbf{Type} & \textbf{Description} & \textbf{Extraction} \\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{User / author signals}} \\
+user\_id/username & ID/String & Unique identifier and handle of the creator & Scraped \\
+user\_verified & Boolean & Verification status of the author & Scraped \\
+is\_private & Boolean & Whether the account is set to private & Scraped \\
+author\_stats & Floats & Follower, hearts, video, and friend counts & Scraped; $\log(1{+}x)$ \\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{Video content \& metadata}} \\
+description & String & User-generated caption and hashtags & Base dataset \\
+temporal\_features & Float & Hour of day and day of week & Sine/cosine encoding \\
+duration & Integer & Total length of the video in seconds & Base dataset \\
+challenges & String & Associated hashtag challenges or trends & Base dataset \\
+video\_bytes & Binary & Scraped video resized to 256$\times$256 @ 1fps & \texttt{yt-dlp} + \texttt{moviepy} \\
+detected\_objects & String & Objects detected in video frames & DETR-ResNet-50 \\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{Audio \& technical specs}} \\
+music\_info & String & Title, album, and author of the audio & \texttt{yt-dlp} metadata \\
+resolution & Integer & Video width and height in pixels & \texttt{yt-dlp} \\
+aspect\_ratio & Float32 & Ratio of width to height & Calculated \\
+vq\_score & Float64 & Visual quality score & Base dataset \\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{Engagement stats \& target labels}} \\
+engagement\_score & Float64 & Weighted sum of interactions per view & Engineered \\
+view\_velocity & Float64 & Views accumulated per hour since creation & $\log(1{+}x)$ scaled \\
+is\_viral & Binary & Classification ($P{=}0.95$) of engagement & Quantile threshold \\
+\bottomrule
 \end{tabularx}
 \end{table}
 
-\begin{table}
-\centering
-\small
-\begin{tabularx}{\textwidth}{|l l X l|}
-    \hline
-    \multicolumn{4}{|l|}{\textbf{Video content \& metadata}} \\
-    \hline
-    description & String & User-generated caption and hashtags & Base dataset \\
-    create\_time & Timestamp & Exact time of video publication & Base dataset (UTC) \\
-    temporal\_features & Float & Hour of day and Day of week & Sine/cosine cyclic encoding \\
-    is\_ad & Boolean & Flag for paid/sponsored content & Base dataset \\
-    duration & Integer & Total length of the video in seconds & Base dataset \\
-    challenges & String & Associated hashtag challenges or trends & Base dataset \\
-    video\_bytes & Binary & Scraped video resized to 256x256 @ 1fps & \texttt{yt-dlp} + \texttt{moviepy} \\
-    detected\_objects & String & Objects detected in video & Pretrained facebook/detr-resnet-50 \\
-    \hline
-\end{tabularx}
-\end{table}
+\subsection{Task definition}
+\label{sec:task}
 
-\begin{table}
-\centering
-\small
-\begin{tabularx}{\textwidth}{|l l X l|}
-    \hline
-    \multicolumn{4}{|l|}{\textbf{Audio \& music specs}} \\
-    \hline
-    music\_info & String & Title, album, and author name of the audio & \texttt{yt-dlp} payload metadata \\
-    music\_play\_url & String & URL source for the audio file & Base dataset \\
-    \hline
-\end{tabularx}
-\end{table}
+The definition of virality (\texttt{is\_viral}) we produced is the target
+dimension we optimize for. It is meant to capture outliers relative to any given
+account stack-ranked in absolute terms with the goal of producing a signal
+that's useful for any account size. We compute two scores for each video:
+\textbf{engagement} and \textbf{view velocity}.
 
-\begin{table}
-\centering
-\small
-\begin{tabularx}{\textwidth}{|l l X l|}
-    \hline
-    \multicolumn{4}{|l|}{\textbf{Technical / video specs}} \\
-    \hline
-    resolution & Integer & Video width and height in pixels & \texttt{yt-dlp} \\
-    aspect\_ratio & Float32 & Ratio of width to height & Calculated from payload \\
-    filesize & Integer & Total storage size of the video file & \texttt{yt-dlp} payload metadata \\
-    codecs & String & Video (vcodec) and audio (acodec) formats & \texttt{yt-dlp} payload metadata \\
-    vq\_score & Float64 & Visual quality score & Base dataset \\
-    \hline
-\end{tabularx}
-\end{table}
+\textbf{Engagement}
+\begin{equation}
+\text{engagement}_i = \frac{\text{share\_count} \times w_0 + \text{save\_count} \times w_1 + \text{comment\_count} \times w_2 + \text{like\_count} \times w_3}{\text{play\_count}}
+\label{eq:engagement}
+\end{equation}
 
-\begin{table}
-\centering
-\small
-\begin{tabularx}{\textwidth}{|l l X l|}
-    \hline
-    \multicolumn{4}{|l|}{\textbf{Engagement stats \& target labels}} \\
-    \hline
-    engagement\_score & Float64 & Weighted sum of interactions per view & Engineered; weighted calculation \\
-    view\_velocity & Float64 & Views accumulated per hour since creation & Engineered; $\log(1+x)$ scaled \\
-    is\_viral & Binary & Classification ($P=0.95$) of engagement & Engineered; (quantile threshold) \\
-    \hline
-\end{tabularx}
-\end{table}
+Engagement represents the volume of "interactions" a video had relative to its
+play count, making the score relative to the account size. As shown in
+Figure~\ref{fig:play_count}, accounts with a larger audience will most likely
+outperform their counterparts in absolute measurements. This signal instead
+captures a degree of engagement normalized to audience size: a small account with
+a few hundred followers that generates thousands of interactions would have a
+comparable engagement to an account with millions of followers that accumulated
+hundreds of thousands of interactions.
 
-\subsection*{Task definition}
-
-The definition of virality (is\_viral) we produced is the target dimension we
-optimize for. It is meant to capture outliers relative to any given account
-stack-ranked in absolute terms with the goal of producing a signal that's useful
-for any account size.
-
-In order to recreate a mixed signal that fits the previous definition, we
-compute two scores for each video, \textbf{engagement} and \textbf{view
-velocity}.
-
-\subsubsection*{Engagement}
-
-\begin{align}
-    \text{engagement}_i &= \frac{\text{share\_count} \times w_0 + \text{save\_count} \times w_1 + \text{comment\_count} \times w_2 + \text{like\_count} \times w_3}{\text{play\_count}}
-\end{align}
-
-Where $engagement$ is meant to represent a volume of "interactions" a video had
-relative to its play count, making the score relative to the account size. As
-shown in the following graph, its expected to assume that accounts with a larger
-audience will most likely outperform its counterparts, making these videos seem
-more "viral" in absolute measurements.
-
-\begin{figure}[ht]
+\begin{figure}[h]
     \centering
-    \begin{minipage}{0.48\textwidth}
+    \begin{minipage}{0.47\textwidth}
         \centering
         \includegraphics[width=\textwidth]{assets/play_count_by_account_size_raw.png}
-        \caption{As the account size increases, the play count increases. We're
-        interested in somehow normalizing this to produce a signal that fairly
-        compares "virality" irrespective of account size.}
+        \caption{Raw play count by account size. Larger accounts naturally
+        accumulate more views, motivating our normalized engagement signal.}
+        \label{fig:play_count}
     \end{minipage}
-\end{figure}
-
-What this signal is meant to capture instead is a degree of "engagement" that's
-normalized to the audience size of any given account. To convey the idea, a
-small account with a few hundred followers that produces a video that generates
-thousands of interactions would have a comparable engagement to an acconut with
-millions of followers that accumulated hundredths of thousands of interactions
-instead.
-
-\subsubsection*{View velocity}
-
-\begin{align}
-    \text{view velocity}_i &= \frac{\text{play\_count}}{\text{delta\_hours}}
-\end{align}
-
-
-\textbf{View velocity} normalizes the value of $play\_count$ by the total amount
-of time a video has been live collecting interactions. A video with a high
-"view velocity" is collecting interactions "faster" relative to the rest.
-
-\begin{figure}[ht]
-    \centering
-    \begin{minipage}{0.48\textwidth}
+    \hfill
+    \begin{minipage}{0.47\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{assets/play_count_by_delta_hours_normalized.png}
-        \caption{The ratio of plays to delta\_hours shows the natural time-decay
-        bias in raw play\_count. A video with 100k views in 1 hour would look
-        worse than a video with 100k + 1 views over 1 month. Normalizing by
-        delta\_hours "levels the playing field".}
+        \includegraphics[width=\textwidth]{assets/view_velocity_by_delta_hours_log.png}
+        \caption{View velocity by exposure time. Videos accumulate views most
+        rapidly in the first few hours, with velocity dropping sharply thereafter.}
+        \label{fig:view_velocity}
     \end{minipage}
 \end{figure}
 
-\subsubsection*{Producing the signal}
+\subsection*{View velocity}
+View velocity normalizes play count by the total time a video has been live
+(Figure~\ref{fig:view_velocity}). A video with high view velocity accumulates interactions faster:
+\vspace{-6pt}
+\begin{equation}
+\text{view velocity}_i = \frac{\text{play\_count}}{\text{delta\_hours}}
+\label{eq:velocity}
+\end{equation}
 
-We add together both measurements to produce a signal $S_i$ for each video that
-we use to stack-rank them in absolute $S_i$ terms and consider the top $5\%$ as
-"viral":
-
+\subsection*{Producing the signal}
+We combine both measurements into a signal $S_i$ for each video and consider the
+top $5\%$ as ``viral'':
 \begin{align}
-    S_i &= \frac{\text{engagement}_i}{\text{engagement}_{max}} + \frac{\text{view velocity}_i}{\text{view velocity}_{max}} \\
-    y_{\text{is\_viral}}^{(i)} &= 
-    \begin{cases} 
-      1 & \text{if } S_i \geq F_S^{-1} (0.95) \\
-      0 & \text{Otherwise}
-    \end{cases}
+S_i &= \frac{\text{engagement}_i}{\text{engagement}_{max}} + \frac{\text{view velocity}_i}{\text{view velocity}_{max}} \label{eq:signal} \\
+y_{\text{is\_viral}}^{(i)} &=
+\begin{cases}
+  1 & \text{if } S_i \geq F_S^{-1}(0.95) \\
+  0 & \text{otherwise}
+\end{cases} \label{eq:viral}
 \end{align}
 
-The reason we approached the concept of virality as described is rooted in
-convenience and usefulness. There are just too many dynamic forces that could
-influence the level of virality a video could reach. Many things like the
-current social discourse, ongoing political and economic events, or just sheer
-luck (being in the right place at the right time) could determine the success of
-any given video.
+Our reasoning for this definition of virality is rooted in convenience and
+usefulness. There are too many dynamic forces that influence virality, like current social
+discourse, political events, or sheer luck, which makes it near impossible to
+capture all contributing factors. Instead, we condense a signal that is useful
+even for small accounts: rolling out a video that is a couple of folds more viral
+relative to their expected baseline is considered a win.
 
-Trying to capture such a broad range of "reasons" is likely near impossibility
-limits either due to data or resource constraints.
+\subsection{Model architecture}
+\label{sec:architecture}
 
-Instead we try to condense a signal that's useful even for small accounts with
-the available data. We're thinking about small businesses/ content creators
-looking to amplify their social presence. Rolling out a video that's a couple of
-folds more viral relative to their expected baseline is considered a win!
+The architecture implements a mixture of processing techniques for different data
+modalities; all branches are concatenated and passed through a late fusion module
+to produce 2 regression heads (engagement and view velocity) and 1
+classification head (virality). The outputs are stitched together into a final
+weighted loss. Figure~\ref{fig:architecture} shows the full pipeline.
 
-\subsection*{Model architecture}
-
-The architecture implements a mixture of state-of-the-art ML processing
-techniques for the different data modalities fed into the model; all these get
-concatenated and passed through a late fusion module to finally produce 2
-regression heads for the engagement and view velocity scores and 1
-classification head for the virality class. We ultimately stitch them together
-to compute a final weighted loss to have the different output targets contribute
-in different quantities.
-
-\begin{figure}[ht]
+\begin{figure}[h]
 \centering
 \resizebox{\textwidth}{!}{
 \begin{tikzpicture}[
-    node distance=1.2cm and 1.5cm,
-    base_style/.style={rectangle, draw, rounded corners, thick, align=center, inner sep=10pt},
-    block/.style={base_style, fill=white, text width=3.2cm, minimum height=1.2cm},
-    input/.style={base_style, fill=gray!10, text width=3.2cm, minimum height=1.6cm},
-    branch/.style={base_style, fill=blue!5, text width=3.4cm, minimum height=1.4cm},
-    head/.style={base_style, fill=orange!5, text width=3.4cm, minimum height=1.4cm},
-    loss/.style={base_style, fill=red!5, text width=4.2cm, minimum height=1.8cm},
+    node distance=1.0cm and 1.2cm,
+    base_style/.style={rectangle, draw, rounded corners, thick, align=center, inner sep=8pt},
+    block/.style={base_style, fill=white, text width=2.8cm, minimum height=1.0cm},
+    input/.style={base_style, fill=gray!10, text width=2.8cm, minimum height=1.2cm},
+    branch/.style={base_style, fill=blue!5, text width=3.0cm, minimum height=1.2cm},
+    head/.style={base_style, fill=orange!5, text width=3.0cm, minimum height=1.2cm},
+    loss/.style={base_style, fill=red!5, text width=3.6cm, minimum height=1.4cm},
     arrow/.style={-Stealth, thick}
 ]
-% --- Inputs ---
 \node[input] (text_in) {\textbf{Text input}\\ \small \texttt{input\_ids} \\ \small (batch, 256)};
 \node[input, below=of text_in] (video_in) {\textbf{Video input}\\ \small \texttt{pixel\_values} \\ \small (batch, 16, 3, 224, 224)};
 \node[input, below=of video_in] (tab_in) {\textbf{Tabular input}\\ \small \texttt{tabular\_features} \\ \small (batch, 19)};
-% --- Modules ---
 \node[branch, right=of text_in] (text_mod) {\textbf{Text model}\\ \small Frozen DistilBERT \\ \small (hidden: 768)};
 \node[branch, right=of video_in] (video_mod) {\textbf{Video model}\\ \small Frozen VideoMAE \\ \small (hidden: 768)};
-\node[branch, right=of tab_in] (tab_mod) {\textbf{Tabular model}\\ \small 2-layer MLP \\ \small (d\_model: 512)};
-% --- Fusion ---
-\node[block, right=1.2cm of video_mod, fill=green!5, text width=3.8cm] (fusion) {
-    \textbf{Late fusion}\\ \small (dim=2048) \\
-};
-% --- Heads ---
-\node[head, right=1.5cm of fusion] (class_head) {\textbf{Classification head}\\ \small Virality logit \\ \small (batch, 1)};
-\node[head, above=0.5cm of class_head] (eng_head) {\textbf{Engagement head}\\ \small Regression logit \\ \small (batch, 1)};
-\node[head, below=0.5cm of class_head] (vel_head) {\textbf{Velocity head}\\ \small Regression logit \\ \small (batch, 1)};
-% --- Loss aggregator ---
-\node[loss, right=1.8cm of class_head] (total_loss) {
-    \textbf{Multi-task loss}\\
-    \scriptsize $\mathcal{L}_{\text{total}} = \lambda_{\text{reg}}\mathcal{L}_{\text{Huber}} + \lambda_{\text{cls}}\mathcal{L}_{\text{BCE}}$ \\
-    \small $\lambda_{\text{reg}}=0.1, \lambda_{\text{cls}}=0.9$
-};
-% --- Arrows ---
+\node[branch, right=of tab_in] (tab_mod) {\textbf{Tabular MLP}\\ \small 2-layer MLP \\ \small ($d$=512)};
+\node[block, right=1.0cm of video_mod, fill=green!5, text width=3.2cm] (fusion) {\textbf{Late fusion}\\ \small (dim=2048)};
+\node[head, right=1.2cm of fusion] (class_head) {\textbf{Classification}\\ \small Virality logit};
+\node[head, above=0.4cm of class_head] (eng_head) {\textbf{Engagement}\\ \small Regression logit};
+\node[head, below=0.4cm of class_head] (vel_head) {\textbf{Velocity}\\ \small Regression logit};
+\node[loss, right=1.4cm of class_head] (total_loss) {\textbf{Multi-task loss}\\
+    \scriptsize $\mathcal{L} = \lambda_{\text{reg}}\mathcal{L}_{\text{Huber}} + \lambda_{\text{cls}}\mathcal{L}_{\text{cls}}$ \\
+    \small $\lambda_{\text{reg}}{=}0.3,\;\lambda_{\text{cls}}{=}0.7$};
 \draw[arrow] (text_in) -- (text_mod);
 \draw[arrow] (video_in) -- (video_mod);
 \draw[arrow] (tab_in) -- (tab_mod);
-\draw[arrow] (text_mod.east) -- ++(0.5,0) |- (fusion.west);
+\draw[arrow] (text_mod.east) -- ++(0.4,0) |- (fusion.west);
 \draw[arrow] (video_mod.east) -- (fusion.west);
-\draw[arrow] (tab_mod.east) -- ++(0.5,0) |- (fusion.west);
-\draw[arrow] (fusion.east) -- ++(0.5,0) |- (eng_head.west);
+\draw[arrow] (tab_mod.east) -- ++(0.4,0) |- (fusion.west);
+\draw[arrow] (fusion.east) -- ++(0.4,0) |- (eng_head.west);
 \draw[arrow] (fusion.east) -- (class_head.west);
-\draw[arrow] (fusion.east) -- ++(0.5,0) |- (vel_head.west);
-% --- Loss connections ---
-\draw[arrow, dashed, gray] (eng_head.east) -- ++(0.4,0) |- (total_loss.160);
-\draw[arrow, dashed, gray] (vel_head.east) -- ++(0.4,0) |- (total_loss.200);
+\draw[arrow] (fusion.east) -- ++(0.4,0) |- (vel_head.west);
+\draw[arrow, dashed, gray] (eng_head.east) -- ++(0.3,0) |- (total_loss.160);
+\draw[arrow, dashed, gray] (vel_head.east) -- ++(0.3,0) |- (total_loss.200);
 \draw[arrow, dashed, gray] (class_head.east) -- (total_loss.west);
 \end{tikzpicture}
 }
 \caption{End-to-end architecture: features are extracted from multimodal inputs,
 fused into a shared latent space, and passed to specialized heads. The final
-objective is a weighted combination of Huber regression loss and weighted binary
-cross-entropy (BCE) loss.}
+objective is a weighted combination of Huber regression loss and classification loss.}
+\label{fig:architecture}
 \end{figure}
 
-\subsubsection*{Data modalities}
+\paragraph{Text input}
+The text input is a concatenation of textual dimensions:
+\texttt{``[CLS] [TITLE] \dots\ [MUSIC] \dots\ [CHALLENGES] \dots\ [OBJECTS] \dots\ [LOC] \dots''}
+fed into a pretrained, frozen DistilBERT~\cite{sanh2019distilbert} backbone to extract a 768-dimensional semantic representation from the [CLS] token.
 
-\subsubsection*{Text input}
+\paragraph{Video input}
+Videos were downsized to 224$\times$224 pixels at 1 FPS. We sample 16 frames and feed them into a frozen VideoMAE~\cite{tong2022videomae} model, then apply global average pooling across the output tokens to yield a 768-dimensional embedding capturing visual features and temporal dynamics.
 
-The text input is a concatenation of the different text dimensions in the
-following form:
-
-\begin{quote}
-    "[CLS] [TITLE] ... [MUSIC] ... [CHALLENGES] ... [OBJECTS] ... [LOC] ..."
-\end{quote}
-
-That we populate with the example's data and feed this into a pretrained, frozen
-\href{https://huggingface.co/distilbert/distilbert-base-uncased}{DistilBERT}
-backbone to extract a 768-dimensional semantic representation from the [CLS]
-token, capturing the semantics of all textual components from the example in a
-compact representation.
-
-\subsubsection*{Video input}
-
-During the dataset composition step, the original videos were downsized and
-downsampled to 224x224 pixels at 1 FPS to reduce processing requirements. From
-that transformed version, we sample 16 frames that we feed into a pretrained,
-frozen \href{https://huggingface.co/MCG-NJU/videomae-base}{VideoMAE} model to
-encode the video into a spatial-temporal embedding space.
-
-We then apply global average pooling across the output tokens to yield a
-768-dimensional embedding that captures both visual features and temporal
-dynamics.
-
-\subsubsection*{Tabular input}
-
+\textbf{Tabular input}
 The tabular branch processes 19 heterogeneous features including author signals,
-temporal metadata, and video quality scores. To handle the varying scales of
-these inputs, we apply $log(1+x)$ scaling to high-variance author statistics and
-sine/cosine cyclic encoding to temporal features like hour of day to preserve
-periodic relationships. These are fed into a 2-layer MLP with layer
-normalization and dropout, projecting them into a learnable 512-dimensional
-space.
+temporal metadata, and video quality scores. We apply $\log(1{+}x)$ scaling to
+high-variance author statistics and sine/cosine cyclic encoding to temporal
+features. These are fed into a 2-layer MLP with layer normalization and dropout,
+projecting them into a learnable 512-dimensional space.
 
-\subsubsection*{Late fusion}
+\textbf{Late fusion}
+We concatenate the 768-dim text embedding, 768-dim video embedding, and 512-dim
+tabular output into a single 2048-dimensional vector, passed through a shared
+fusion MLP mapping to $d_{\text{model}}{=}512$.
 
-In the late fusion module, we concatenate the 768-dimension text embedding,
-the 768-dimension video embedding, and the 512-dimension tabular output into a
-single 2048-dimensional vector. This combined representation is passed through a
-shared fusion MLP, which maps the multimodal features into a unified latent
-space of $d\_model=512$. This shared representation allows the model to learn
-complex inter-modal correlations before branching into specialized tasks.
+\textbf{Multi-head targets}
+We employ a multi-head architecture: two regression heads predict the continuous
+engagement and view velocity scores, and one classification head predicts
+virality (the 95th percentile of the combined distribution).
 
-\subsubsection*{Multi-head targets}
+\paragraph{Loss targets}                                                                                    We experimented with two loss formulations. \textbf{Weighted BCE:} Huber loss~\cite{huber1992robust} for regression and                                                                                                                                                                                                                                              
+  weighted BCE for classification, with $\lambda_{\text{cls}}{=}0.7$ and
+  $\lambda_{\text{reg}}{=}0.3$; the minority class is upweighted by
+  $\frac{p}{1-p}$ where $p{=}0.95$.
+  \textbf{Focal loss}~\cite{lin2017focal}\textbf{:} replaces weighted BCE with an
+  adaptive mechanism that down-weights easy negatives, with $\gamma{=}2.0$ and
+  $\alpha{=}p_{\text{virality\_threshold}}$.
 
-We employ a multi-head architecture to simultaneously model continuous and
-categorical virality signals. Each head progressively halves the upstream
-$d\_model$ to reduce dimensionality while increasing specialization:
+% =============================================================================
+\section{Experiments and Results}
+\label{sec:experiments}
 
-\begin{itemize}
-    \item Engagement and velocity heads: Two regression heads predict the
-    continuous engagement and view velocity scores.
-    \item Classification head: A single head predicts the probability of
-    virality, defined by the 95th percentile of the combined engagement and
-    velocity distribution.
-\end{itemize}
+We track ROC-AUC (general class separability), PR-AUC (our primary metric, as it
+does not reward correct prediction of the non-viral majority), and F1-Score at
+the 0.5 threshold.
 
-\subsubsection*{Loss target}
+\subsection{Training dynamics}
+\label{sec:training}
 
-We experimented with two types loss targets.
+We compared two training regimes: a multi-task \textbf{weighted loss} baseline
+with linear learning rate decay over 15 epochs, and a \textbf{focal loss}
+experiment with cosine scheduler and 10\% warmup phase. As shown in
+Figure~\ref{fig:training}, both models exhibited steady convergence. The focal
+loss model reached optimal performance earlier (around epoch 8), suggesting it
+could ignore easy negatives and converge faster on the viral decision boundary.
 
-\subsubsection*{Weighted Binary Cross-Entropy loss (BCE)}
-
-This loss target is a composite of the different upstream heads, weighted to
-prioritize the primary classification task while using the regression heads as
-auxiliary signals:
-
-\begin{itemize}
-    \item We use \href{https://arxiv.org/pdf/2108.12627}{Huber loss} for the
-    regression targets to remain robust against the extreme outliers common in
-    viral distributions, and a weighted BCE for the classification target.
-    \item We set $\lambda_{cls}=0.7$ and $\lambda_{reg}=0.3$. This heavy
-    weighting on classification ensures the model focuses on detecting the rare
-    viral events (which are themselves upweighted by a factor of
-    $virality\_threshold / (1 - virality\_threshold)$ in the BCE loss), while
-    the regression tasks provide continuous "engagement" and "view velocity"
-    measurements to complement the final signal.
-\end{itemize}
-
-\subsubsection*{Focal loss}
-
-This loss target -- introduced in
-\href{https://arxiv.org/abs/1708.02002}{"Focal Loss for Dense Object Detection"} --
-replaces the standard weighted BCE with an adaptive weighting mechanism designed
-to prioritize high-error samples over well-classified "easy" examples (i.e. the
-over-populated negative class). Focal loss can be. modulated with a "focus
-parameter" $\gamma$ and a "balance factor" $\alpha$.
-
-\begin{itemize}
-    \item We set $\gamma=2.0$ to aggressively down-weight the loss contributed
-    by the abundant negatives, to allow the model to focus on the hard
-    negatives.
-    \item And $\alpha=p\_virality\_threshold$ to account for the extreme class
-    imbalance to have the model re-weight both classes.
-\end{itemize}
-
-\section*{Experiments and results}
-
-To evaluate the performance of our multi-modal approach, we track a suite of
-metrics that address both the regression of engagement signals and the
-classification of rare viral events. Given the high degree of class imbalance in
-our dataset and the nature of the problem we're solving for, we prefer to
-prioritize \textbf{recall}, and recall-associated metrics.
-
-\begin{itemize}
-    \item \textbf{Receiver Operating Characteristic - Area Under the Curve
-    (ROC-AUC):} Used to measure the general separability of the classes across
-    all potential thresholds.
-    \item \textbf{Precision-Recall Area Under the Curve (PR-AUC):} Our primary
-    metric for the classification head. Unlike ROC-AUC, PR-AUC does not reward
-    the model for correctly predicting the "non-viral" majority, providing a
-    more honest view of the model's ability to identify viral content.
-    \item \textbf{F1-Score:} Calculated at the 0.5 threshold to measure the
-    harmonic mean of precision and recall.
-\end{itemize}
-
-\subsection*{Training Dynamics}
-
-We compared two distinct training regimes: a multi-task \textbf{weighted loss} 
-baseline and a specialized \textbf{focal loss} run. The baseline utilized a 
-linear learning rate decay over 15 epochs, while the focal loss experiment 
-used a cosine scheduler with a 10\% warmup phase to stabilize the initial
-gradients given the aggressive $\gamma=2.0$ parameter.
-
-As shown in figure 1 and figure 2, both models exhibited steady convergence. 
-The focal loss model reached its optimal performance earlier, around epoch 8, 
-suggesting that this loss type allowed the model  to ignore easy negatives and
-converge faster on the decision boundary for viral samples.
-
-\begin{figure}[ht]
+\begin{figure}[h]
     \centering
-    \begin{minipage}{0.48\textwidth}
+    \begin{minipage}{0.47\textwidth}
         \centering
         \includegraphics[width=\textwidth]{assets/loss.png}
-        \caption{Weighted loss training dynamics.}
     \end{minipage}
     \hfill
-    \begin{minipage}{0.48\textwidth}
+    \begin{minipage}{0.47\textwidth}
         \centering
         \includegraphics[width=\textwidth]{assets/focal_loss.png}
-        \caption{Focal loss training dynamics.}
     \end{minipage}
+    \caption{Training dynamics for weighted loss (left) and focal loss (right).}
+    \label{fig:training}
 \end{figure}
 
-\subsection*{Analysis of results}
+\subsection{Analysis of results}
+\label{sec:results}
 
-\begin{table}[ht]
-\centering
-\label{table:results_comparison}
-\begin{tabular}{@{}lccc@{}}
-    \toprule
-    \textbf{Metric} & \textbf{Weighted loss} & \textbf{Focal loss} & \textbf{$\Delta$} \\ \midrule
-    ROC-AUC         & 0.7875                & \textbf{0.7987}    & +1.4\%           \\
-    PR-AUC          & 0.1805                & \textbf{0.1805}    & ---              \\
-    F1-Score        & 0.2452                & \textbf{0.2575}    & +5.0\%           \\
-    Precision       & 0.2092                & \textbf{0.2400}    & +14.7\%          \\
-    Recall          & \textbf{0.2963}       & 0.2777             & -6.2\%           \\ \bottomrule
-\end{tabular}
+\begin{table}[h]
 \caption{Comparative performance between weighted BCE and focal loss targets.}
+\label{tab:results}
+\centering
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Metric} & \textbf{Weighted loss} & \textbf{Focal loss} & \textbf{$\Delta$} \\ \midrule
+ROC-AUC         & 0.7875                & \textbf{0.8012}    & +1.7\% \\
+PR-AUC          & \textbf{0.1805}       & 0.1788             & -0.94\% \\
+F1-Score        & 0.2452                & \textbf{0.2620}    & +6.8\% \\
+Precision       & 0.2092                & \textbf{0.2479}    & +18.4\% \\
+Recall          & \textbf{0.2963}       & 0.2777             & -4.5\% \\ \bottomrule
+\end{tabular}
 \end{table}
 
-The transition to focal loss yielded a significant \textbf{14.7\% improvement 
-in precision}. While the baseline weighted BCE loss model achieved higher recall
-by aggressively upweighting the minority class, it suffered from a high
-false-positive rate. Focal loss mitigated this by forcing the model to 
-focus on "hard" examples, resulting in a more balanced F1-score of 0.2575.
+The transition to focal loss yielded a \textbf{18.4\% improvement in precision}.
+While the baseline weighted BCE model achieved higher recall by aggressively
+upweighting the minority class, it suffered from a high false-positive rate.
+Focal loss mitigated this by forcing the model to focus on ``hard'' examples,
+resulting in a more balanced F1 of 0.2620.
 
-Despite the marginal improvement in ROC-AUC, the stagnancy of the PR-AUC at
-0.1805 across both experiments confirms that while we can tune the
-precision-recall trade-off, the absolute confidence in viral classification is
-likely bounded by factors we didn't model:
+Despite the marginal improvement in ROC-AUC, PR-AUC stayed mostly across
+both experiments, confirming that the absolute confidence in viral classification
+is likely bounded by factors we did not model:
 
 \begin{enumerate}
-    \item \textbf{Unmeasurable stochasticity:} Like we suggested earlier, there
-    are simply too many ongoing dynamics that influence the popularity of a
-    video (e.g. socio-political discourse, randomness, etc.) that we couldn't
-    realistically capture in a finite dataset.
-    \item \textbf{Gaps in dataset:} We might still be missing additional
-    input sources like audio, video dynamics, or platform-specific nuances (e.g.
-    current trends, etc.) that significantly influence a video's success.
+    \item \textbf{Unmeasurable stochasticity:} Too many ongoing dynamics (socio-political discourse, randomness) influence popularity in ways a finite dataset cannot capture.
+    \item \textbf{Gaps in dataset:} Missing input sources like audio features, platform-specific nuances (e.g.\ current trends), or richer video dynamics.
 \end{enumerate}
 
-\section*{Next steps}
+\subsection{Feature importance}                                                                             \label{sec:feature_importance}                                                                            
+  We run permutation importance on the 19 tabular features (shuffling each across 300 test examples and measuring F1 drop) through two lenses: the \textbf{classification head} and the \textbf{regression heads}
+  (Figure~\ref{fig:permutation}).
 
-While the current model establishes a strong baseline for late-fusion multimodal
-learning, the discrepancy between ROC-AUC and PR-AUC suggests that the model is
-struggling with the extreme sparsity of viral signals. We propose the following
-directions for future research:
+  \begin{figure}[h]
+      \centering
+      \begin{minipage}{0.47\textwidth}
+          \centering
+          \includegraphics[width=\textwidth]{assets/permutation_importance.png}
+      \end{minipage}
+      \hfill
+      \begin{minipage}{0.47\textwidth}
+          \centering
+          \includegraphics[width=\textwidth]{assets/permutation_importance_regression.png}
+      \end{minipage}
+      \caption{Permutation importance via classification head (left) and regression heads (right).}
+      \label{fig:permutation}
+  \end{figure}
+
+  The two heads reveal complementary strategies. The classification head relies
+  almost entirely on \textbf{creator reputation}: \texttt{follower\_count} (+0.41),
+  \texttt{heart\_count} (+0.23), and \texttt{friend\_count} (+0.14) dominate, while
+  content features have near-zero impact. The regression heads instead prioritize
+  \textbf{content and temporal properties}: \texttt{duration} (+0.13),
+  \texttt{sin\_hour} (+0.10), \texttt{height} (+0.09), and \texttt{vq\_score}
+  (+0.08), with creator signals contributing moderately. This suggests the
+  classification head learns a shortcut that large accounts are likely to go
+  viral, while the regression heads, tasked with predicting continuous scores,
+  must attend to finer-grained signals that influence \textit{how much} engagement
+  a video receives.
+\subsection{Ablation studies}
+\label{sec:ablation}
+To determine the specific contributions of each modality to our multimodal model, we conduct ablation experiments. Specifically, we zero out one modality's representation at a time using forward hooks and measure metric degradation on 300 test examples (Figure~\ref{fig:ablation}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{assets/ablation_study.png}
+    \caption{Ablation study: metrics when each modality is individually zeroed.
+    Removing tabular features causes the most severe degradation (F1 drops to 0).}
+    \label{fig:ablation}
+\end{figure}
+
+
+    From Figure 6, we see that Tabular Features are critical, and Text has the smallest individual contribution. Zeroing the tabular MLP output collapses F1 to 0.000, meaning no example's viral probability exceeds the 0.5 threshold without creator and metadata signals. The model does retain some ranking ability (ROC-AUC = 0.831) from text and video alone. Moreover, Video provides moderate signal: removing video reduces F1 from 0.514 to 0.462 and PR-AUC from 0.466 to 0.374.
+    Zeroing text causes only a slight F1 drop (0.514 $\to$ 0.444). Interestingly, ROC-AUC \textit{increases} marginally (0.931 $\to$ 0.936), suggesting the text branch may introduce slight noise.
+
+
+% =============================================================================
+\section{Conclusion and Future Work}
+\label{sec:conclusion}
+
+While the model provides a strong baseline for late-fusion multimodal learning,
+the gap between ROC-AUC and PR-AUC indicates difficulty handling the extreme
+sparsity of viral signals. Future work could incorporate additional modalities
+such as \textbf{audio features} and richer video dynamics, and explore
+\textbf{Self-Exciting Hawkes Process} models to capture engagement growth over time.
+
+Overall, intrinsic content and creator signals provide predictive value for
+virality, but outcomes remain highly stochastic. Our multi-task framework
+stabilizes training of a high-dimensional multimodal model and offers a useful
+foundation for future work on social media dynamics.
+
+% =============================================================================
+\section*{Contributions}
 
 \begin{itemize}
-    \item Run \textbf{ablation experiments} on the input features to surface
-    relevance (e.g. feeding everything but the video input, and viceversa).
-    \item An interesting follow-up we pondered on involves incorporating an
-    auxiliary regression task to predict the continuous growth size of
-    engagement overtime using a \textbf{Self-Exciting Hawkes Process} regression
-    module.
+    \item \textbf{Oscar Rodriguez:} Implementation of scraping scripts and dataset compilation as well as support with model architecture design and training runs. I also helped putting together the final write up.
+    \item \textbf{Mahda Soltani:} Implementation of Temporal CV and assistance with feature importance. I also helped putting together the final write up.
+    \item \textbf{Ela Naz Sigin:} Conducted model analysis (ablation studies, feature importance), generating plots and figures for the report. Also experimented with various dataset rebalancing techniques (in practice, training on the rebalanced dataset yielded worse model performance than the original).
 \end{itemize}
 
-Our investigation demonstrates that while intrinsic content features provide a
-signal for virality, the task remains highly stochastic. By leveraging a
-multi-task learning framework with weighted losses, we effectively stabilized
-the training of a high-dimensional multimodal model, achieving a respectable
-ROC-AUC that serves as a foundation for future algorithmic discovery in social
-media dynamics.
+% =============================================================================
+\bibliographystyle{acl_natbib}
+\bibliography{references}
 
-\section*{References}
+% =============================================================================
+\newpage
+\appendix
+\section{Appendix}
+\label{sec:appendix}
 
-\dots
+\subsection{Inference examples}
+We ran a few inferences through our final model to understand our model's strengths and limitations. We decided to prioritize recall over precision while fine tuning our model hyperparameters. Our reasoning was that we aim to capture as many viral videos as possible (true positives), and in this application, a false positive does not have drastic consequences (unlike a medical diagnosis application for instance). Additionally, by prioritizing recall, we can get more useful information out of our model (recognizing more of the truly viral videos).
+\label{sec:inference}
+\begin{figure}[H]
+    \centering
+    \label{fig:inference}
+    \vspace{4pt}
+    \includegraphics[width=1.1\textwidth]{assets/more_inference_examples_cropped.png}
+    \caption{Inference examples showing model strengths (true
+    positives/negatives, green) and shortcomings (false positives/negatives, red).}
+\end{figure}
 
 \end{document}
