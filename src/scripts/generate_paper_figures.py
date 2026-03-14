@@ -5,8 +5,8 @@ Loads rodmosc/viral dataset from HuggingFace in streaming mode and
 produces the plots:
   1. Play count distribution binned by account size (author_follower_count) (both raw and log-scaled).
   2. Play count distribution binned by delta hours (stats_time - create_time) (both raw and log-scaled).
-  3. Normalized play count distribution binned by delta hours.
-  4. Normalized play count distribution binned by delta hours for recent videos (12 - 1024h).
+  3. View velocity (log1p(plays / delta_hours)) binned by delta hours.
+  4. View velocity binned by delta hours for recent videos (12 - 1024h).
 """
 
 import numpy as np
@@ -162,23 +162,21 @@ def plot_play_count_by_delta_hours(df: pd.DataFrame, output_dir: Path):
     print(f"Saved {log_path}")
 
 
-def plot_normalized_play_count_by_delta_hours(df: pd.DataFrame, output_path: Path):
-    """Box plot of play count normalized by account size, binned by delta hours.
+def plot_view_velocity_by_delta_hours(df: pd.DataFrame, output_dir: Path):
+    """Box plots of view velocity (plays / delta_hours) binned by exposure
+    time: one raw, one log-scaled. Shows that recent videos accumulate
+    views at a much higher rate, illustrating TikTok's front-loaded
+    distribution."""
 
-    Normalize by follower count to remove impact of account size, so we can
-    isolate the effect of delta hours on accumulated views."""
-
-    df = df.dropna(subset=["play_count", "create_time", "stats_time",
-                           "author_follower_count"])
-    df = df[(df["play_count"] > 0) & (df["author_follower_count"] > 0)]
-
-    # normalize plays per follower
-    df["plays_per_follower"] = df["play_count"] / df["author_follower_count"]
+    df = df.dropna(subset=["play_count", "create_time", "stats_time"])
+    df = df[df["play_count"] > 0]
 
     create = pd.to_datetime(df["create_time"], unit="s", errors="coerce")
     stats = pd.to_datetime(df["stats_time"], unit="s", errors="coerce")
     df["delta_hours"] = (stats - create).dt.total_seconds() / 3600
     df = df[df["delta_hours"] > 0]
+    df["view_velocity_raw"] = df["play_count"] / df["delta_hours"]
+    df["view_velocity_log"] = np.log1p(df["view_velocity_raw"])
 
     df["delta_bin"] = pd.qcut(df["delta_hours"], q=5, duplicates="drop")
     bins_sorted = sorted(df["delta_bin"].unique())
@@ -188,44 +186,65 @@ def plot_normalized_play_count_by_delta_hours(df: pd.DataFrame, output_path: Pat
         hi = f"{b.right:.0f}"
         labels.append(f"{lo} - {hi}h")
 
+    colors = plt.cm.YlGnBu(np.linspace(0.2, 0.8, len(bins_sorted)))
+
+    # raw view velocity
     fig, ax = plt.subplots(figsize=(8, 5))
-    data_groups = [
-        df[df["delta_bin"] == b]["plays_per_follower"].values
+    raw_groups = [
+        df[df["delta_bin"] == b]["view_velocity_raw"].values
         for b in bins_sorted
     ]
-    bp = ax.boxplot(data_groups, tick_labels=labels, patch_artist=True,
+    bp = ax.boxplot(raw_groups, tick_labels=labels, patch_artist=True,
                     showfliers=False, medianprops=dict(color="black"))
-    colors = plt.cm.YlGnBu(np.linspace(0.2, 0.8, len(bins_sorted)))
     for patch, color in zip(bp["boxes"], colors):
         patch.set_facecolor(color)
-
     ax.set_xlabel("Time Since Publication (hours)", fontsize=12)
-    ax.set_ylabel("Play Count / Follower Count", fontsize=12)
-    ax.set_title("Normalized Play Count by Exposure Time", fontsize=13)
+    ax.set_ylabel("Views per Hour", fontsize=12)
+    ax.set_title("Raw View Velocity by Exposure Time", fontsize=13)
+    ax.ticklabel_format(axis="y", style="scientific", scilimits=(0, 0))
     plt.xticks(rotation=20, ha="right")
     plt.tight_layout()
-    fig.savefig(output_path, dpi=150)
+    raw_path = output_dir / "view_velocity_by_delta_hours_raw.png"
+    fig.savefig(raw_path, dpi=150)
     plt.close(fig)
-    print(f"Saved {output_path}")
+    print(f"Saved {raw_path}")
+
+    # log view velocity
+    fig, ax = plt.subplots(figsize=(8, 5))
+    log_groups = [
+        df[df["delta_bin"] == b]["view_velocity_log"].values
+        for b in bins_sorted
+    ]
+    bp = ax.boxplot(log_groups, tick_labels=labels, patch_artist=True,
+                    showfliers=False, medianprops=dict(color="black"))
+    for patch, color in zip(bp["boxes"], colors):
+        patch.set_facecolor(color)
+    ax.set_xlabel("Time Since Publication (hours)", fontsize=12)
+    ax.set_ylabel("log(1 + Views per Hour)", fontsize=12)
+    ax.set_title("View Velocity by Exposure Time", fontsize=13)
+    plt.xticks(rotation=20, ha="right")
+    plt.tight_layout()
+    log_path = output_dir / "view_velocity_by_delta_hours_log.png"
+    fig.savefig(log_path, dpi=150)
+    plt.close(fig)
+    print(f"Saved {log_path}")
 
 
-def plot_normalized_play_count_by_delta_hours_recent(df: pd.DataFrame, output_path: Path):
-    """Box plot of plays/follower for recent videos (12 - 1024h delta) only to zoom in on recent videos"""
-    df = df.dropna(subset=["play_count", "create_time", "stats_time",
-                           "author_follower_count"])
-    df = df[(df["play_count"] > 0) & (df["author_follower_count"] > 0)]
-
-    df["plays_per_follower"] = df["play_count"] / df["author_follower_count"]
+def plot_view_velocity_by_delta_hours_recent(df: pd.DataFrame, output_path: Path):
+    """Box plot of view velocity for recent videos (12 - 1024h delta) to
+    zoom in on the steep early decay where TikTok's algorithm is most active."""
+    df = df.dropna(subset=["play_count", "create_time", "stats_time"])
+    df = df[df["play_count"] > 0]
 
     create = pd.to_datetime(df["create_time"], unit="s", errors="coerce")
     stats = pd.to_datetime(df["stats_time"], unit="s", errors="coerce")
     df["delta_hours"] = (stats - create).dt.total_seconds() / 3600
 
-    # filter to 12 - 1024 hours
     df = df[(df["delta_hours"] >= 12) & (df["delta_hours"] <= 1024)]
     print(f"  Recent videos (12 - 1024h): {len(df)} rows")
 
-    # Custom buckets
+    df["view_velocity"] = np.log1p(df["play_count"] / df["delta_hours"])
+
     edges = [12, 48, 128, 256, 512, 1024]
     labels = [f"{edges[i]} - {edges[i+1]}h" for i in range(len(edges) - 1)]
     df["delta_bin"] = pd.cut(df["delta_hours"], bins=edges, labels=labels,
@@ -234,7 +253,7 @@ def plot_normalized_play_count_by_delta_hours_recent(df: pd.DataFrame, output_pa
 
     fig, ax = plt.subplots(figsize=(8, 5))
     data_groups = [
-        df[df["delta_bin"] == lbl]["plays_per_follower"].values
+        df[df["delta_bin"] == lbl]["view_velocity"].values
         for lbl in labels
     ]
     bp = ax.boxplot(data_groups, tick_labels=labels, patch_artist=True,
@@ -244,8 +263,8 @@ def plot_normalized_play_count_by_delta_hours_recent(df: pd.DataFrame, output_pa
         patch.set_facecolor(color)
 
     ax.set_xlabel("Time Since Publication (hours)", fontsize=12)
-    ax.set_ylabel("Play Count / Follower Count", fontsize=12)
-    ax.set_title("Normalized Play Count by Exposure Time (Recent Videos)", fontsize=13)
+    ax.set_ylabel("log(1 + Views per Hour)", fontsize=12)
+    ax.set_title("View Velocity by Exposure Time (Recent Videos)", fontsize=13)
     plt.xticks(rotation=20, ha="right")
     plt.tight_layout()
     fig.savefig(output_path, dpi=150)
@@ -267,11 +286,9 @@ def main():
     df = load_data(SAMPLE_SIZE)
     plot_play_count_by_account_size(df.copy(), OUTPUT_DIR)
     plot_play_count_by_delta_hours(df.copy(), OUTPUT_DIR)
-    plot_normalized_play_count_by_delta_hours(
-        df.copy(), OUTPUT_DIR / "play_count_by_delta_hours_normalized.png"
-    )
-    plot_normalized_play_count_by_delta_hours_recent(
-        df.copy(), OUTPUT_DIR / "play_count_by_delta_hours_normalized_recent.png"
+    plot_view_velocity_by_delta_hours(df.copy(), OUTPUT_DIR)
+    plot_view_velocity_by_delta_hours_recent(
+        df.copy(), OUTPUT_DIR / "view_velocity_by_delta_hours_recent.png"
     )
     print("Done!")
 
